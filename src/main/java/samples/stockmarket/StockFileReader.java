@@ -20,15 +20,19 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+
+import com.ckjava.xutils.Constants;
+import com.ckjava.xutils.DateUtils;
 
 /**
  *
  * @author Dr.V.Steinhauer
  */
-public class StockFileReader {
+public class StockFileReader implements Constants {
 
     private int maxCounter;
     private String[] valuesRow;
@@ -57,9 +61,8 @@ public class StockFileReader {
         this.setMaxCounter(maxCounter);
     }
 
-    @SuppressWarnings("static-access")
-    public void read(String fileName) {
-        HashMap hm = new HashMap();
+    public List<StockInfo> readMoney163StockDataFile(String fileName) {
+    	List<StockInfo> dataList = new ArrayList<>();
         File file = new File(fileName);
         System.out.println("file = " + fileName+". It will be filtered the values for the moment of the market opened");
         int counter = 0;
@@ -68,13 +71,30 @@ public class StockFileReader {
             BufferedReader dis = new BufferedReader(new InputStreamReader(fis));
             String s;
             while ((s = dis.readLine()) != null) {
-                //System.out.println(s);
                 String[] s1 = s.split(",");
-                String s00 = s1[0].replace('\"', ' ').trim();
-                String s01 = s1[1].replace('\"', ' ').trim();
-                hm.put(s00, s.replace('\"', ' ').trim());
-                //System.out.println(s00 + " " + s01);
-                counter = counter + 1;
+                try {
+                	StockInfo info = new StockInfo();
+                	info.setDate(cleanData(s1[0]));
+                	info.setDateValue(DateUtils.parseDate(cleanData(s1[0]), TIMEFORMAT.DATE).getTime());
+                	info.setCode(cleanData(s1[1]));
+                	info.setTitle(cleanData(s1[2]));
+                	info.setFinalPrice(cleanData(s1[3]));
+                	info.setHighestPrice(cleanData(s1[4]));
+                	info.setLowestPrice(cleanData(s1[5]));
+                	info.setStartPrice(cleanData(s1[6]));
+                	info.setLastFinishPrice(cleanData(s1[7]));
+                	info.setChangePrice(cleanData(s1[8]));
+                	info.setChangeRange(cleanData(s1[9]));
+                	info.setChangeRate(cleanData(s1[10]));
+                	info.setDealAmount(cleanData(s1[11]));
+                	info.setDealMoney(cleanData(s1[12]));
+                	info.setMarketValue(cleanData(s1[13]));
+                	info.setCirculateValue(cleanData(s1[14]));
+                	
+                	dataList.add(info);
+                    counter = counter + 1;
+				} catch (Exception e) {
+				}
             }
             fis.close();
         } catch (IOException ioe) {
@@ -82,21 +102,21 @@ public class StockFileReader {
             ioe.printStackTrace();
             System.exit(1);
         }
-        System.out.println("full number of values = " + counter);        
-        Set s = hm.keySet();
-        Iterator i = s.iterator();
-        valuesRow = new String[this.getMaxCounter()];
-        int n = 0;
-        while (i.hasNext()) {
-            String key = (String) i.next();
-            String value = (String) hm.get(key);
-            //System.out.println(key + "->" + value);
-            n = n + 1;
-            if (counter - n < this.getMaxCounter()) {
-                valuesRow[counter - n] = value;
-                System.out.println(counter + " " + n + " " + valuesRow[counter - n] + " " + (counter - n));
-            }
-        }
-        System.out.println("valuesRow.length=" + valuesRow.length);
+        System.out.println("dataList.size=" + dataList.size());
+        
+        // 倒序排列
+        Collections.sort(dataList, new Comparator<StockInfo>() {
+			@Override
+			public int compare(StockInfo o1, StockInfo o2) {
+				return Integer.parseInt(String.valueOf(o1.getDateValue() - o2.getDateValue()));
+			}
+		});
+        
+        return dataList;
     }
+    
+    private String cleanData(String original) {
+    	return original.replace('\"', ' ').replace('\'', ' ').trim();
+    }
+    
 }
