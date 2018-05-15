@@ -18,6 +18,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.math.BigDecimal;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -41,23 +42,27 @@ import com.ckjava.xutils.StringUtils;
  */
 public class Main {
 	
-    public static void main(String[] args) throws FileNotFoundException {
+    public static void main(String[] args) throws FileNotFoundException, ParseException {
     	String dataPath = "D:/git-workspace/stockPrediction/data/";
-    	String code = "600332";
-    	String dateString = DateUtils.formatTime(new Date().getTime(), "yyyyMMdd");
+    	String code = "601899";
+    	Date currentDate = new Date();
+    	int limitYear = 4; // 从多少年开始训练
+    	
+    	String currentDateString = DateUtils.formatTime(currentDate.getTime(), "yyyyMMdd");
+    	String limitDate = DateUtils.formatTime(DateUtils.addYears(currentDate, -limitYear).getTime(), "yyyyMMdd");
     	
     	StringBuilder report = new StringBuilder();
     	
         //test1();
-    	String trainingSetFilePath = dataPath + "money163/" + code +  "_data_" + dateString + ".csv";
-    	String neuralNetFilePath = dataPath + "neural/" + code + "_neural_" + dateString;
-    	String predictionFilePath = dataPath + "report/" + code + "_neural_" + dateString + ".txt";
+    	String trainingSetFilePath = dataPath + code + "/money163/" + "data_" + currentDateString + ".csv";
+    	String neuralNetFilePath = dataPath + code + "/neural/" + "neural_limitDate_" + limitDate;
+    	String predictionFilePath = dataPath + code + "/report/" + "neural_" + currentDateString + ".txt";
     	
     	StockFileReader fileReader = new StockFileReader();
     	List<StockInfo> dataList = fileReader.readMoney163StockDataFile(trainingSetFilePath);
     	
     	// 封装训练数据集
-    	TrainingData trainingData = new TrainingData(dataList);
+    	TrainingData trainingData = new TrainingData(dataList, DateUtils.parseDate(limitDate, "yyyyMMdd"));
     	trainingData.setNormolizer(100.00D);
     	TrainingSet trainingSet = trainingData.getTrainingSet();
     	

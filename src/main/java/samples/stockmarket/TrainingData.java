@@ -17,6 +17,7 @@
 package samples.stockmarket;
 
 import java.math.BigDecimal;
+import java.util.Date;
 import java.util.List;
 
 import org.neuroph.core.learning.SupervisedTrainingElement;
@@ -30,6 +31,7 @@ import org.neuroph.core.learning.TrainingSet;
 public class TrainingData {
 
     private List<StockInfo> dataList;
+    private Date limitDate;
     private TrainingSet trainingSet = new TrainingSet();
     private double normolizer = 10000.0D;
     private double minlevel = 0.00D;
@@ -58,14 +60,28 @@ public class TrainingData {
         this.normolizer = normolizer;
     }
 
-    public TrainingData() {
+    public Date getLimitDate() {
+		return limitDate;
+	}
+
+	public void setLimitDate(Date limitDate) {
+		this.limitDate = limitDate;
+	}
+
+	public TrainingData() {
     }
     
     public TrainingData(List<StockInfo> dataList) {
     	this.dataList = dataList;
     }
 
-    public TrainingSet getTrainingSet() {
+    public TrainingData(List<StockInfo> dataList, Date limitDate) {
+		super();
+		this.dataList = dataList;
+		this.limitDate = limitDate;
+	}
+
+	public TrainingSet getTrainingSet() {
         int length = dataList.size();
         if (length < 5) {
             System.out.println("dataList.size < 5");
@@ -73,6 +89,10 @@ public class TrainingData {
         }
         try {
             for (int i = 0, c = dataList.size(); i + 4 < c; i++) {
+            	if (limitDate != null && dataList.get(i).getDateValue() < limitDate.getTime()) {
+            		continue;
+            	}
+            	
                 String s1 = dataList.get(i).getFinalPrice();
                 String s2 = dataList.get(i+1).getFinalPrice();
                 String s3 = dataList.get(i+2).getFinalPrice();
