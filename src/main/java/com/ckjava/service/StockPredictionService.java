@@ -45,8 +45,6 @@ public class StockPredictionService implements Constants {
         StringBuilder simpleResult = new StringBuilder();
         simpleResult.append(stockCodeBean.getCode()).append(SPLITER.COLON);
 
-
-
         StringBuilder report = new StringBuilder();
 
         String trainingSetFilePath = dataPath + stockCodeBean.getCode() + "/money163/" + "data_" + currentDateString + ".csv";
