@@ -69,7 +69,7 @@ public class FileDownloadService implements Constants {
         String datas = HttpClientUtils.get(url, getHeaders(), null);
 
         String dateString = DateUtils.formatTime(new Date().getTime(), "yyyyMMdd");
-        String dataFilePath = dataPath + stockCodeBean.getCode() + "/money163/data_"+ dateString +".csv";
+        String dataFilePath = dataPath + stockCodeBean.getCode()+ "/" + dateString + "/money163/data_"+ dateString +".csv";
 
         FileUtils.writeStringToFile(new File(dataFilePath), datas, false, CHARSET.UTF8);
 

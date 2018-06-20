@@ -15,12 +15,14 @@ import com.ckjava.xutils.StringUtils;
 public class TestGetStockData {
 	
 	public static void main(String[] args) throws Exception {
-		String targetString = FileUtils.readFileContent(new File("d:\\Users\\chen_k\\Desktop\\stockCode.txt"), "UTF-8");
+		/*String targetString = FileUtils.readFileContent(new File("d:\\Users\\chen_k\\Desktop\\stockCode.txt"), "UTF-8");
 		List<String> codeList = extractVariable(targetString);
 		System.out.println("size="+codeList.size());
 		for (String string : codeList) {
 			System.out.println(string);
-		}
+		}*/
+
+		downLoadFile();
 	}
 
 	public static List<String> extractVariable(String targetString) {
@@ -48,7 +50,7 @@ public class TestGetStockData {
 		
 		String datas = HttpClientUtils.get(url, null, null);
 		
-		FileUtils.writeStringToFile(new File("D:\\Users\\chen_k\\Downloads\\" + code + "_data.txt"), datas, false, "UTF-8");
+		FileUtils.writeStringToFile(new File("C:\\Users\\ck\\Downloads" + code + "_data.txt"), datas, false, "UTF-8");
 	}
 
 }

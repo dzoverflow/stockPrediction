@@ -47,9 +47,9 @@ public class StockPredictionService implements Constants {
 
         StringBuilder report = new StringBuilder();
 
-        String trainingSetFilePath = dataPath + stockCodeBean.getCode() + "/money163/" + "data_" + currentDateString + ".csv";
-        String neuralNetFilePath = dataPath + stockCodeBean.getCode() + "/neural/" + "neural_" + currentDateString;
-        String predictionFilePath = dataPath + stockCodeBean.getCode() + "/report/" + "neural_" + currentDateString + ".txt";
+        String trainingSetFilePath = dataPath + stockCodeBean.getCode() + "/" + currentDateString + "/money163/" + "data_" + currentDateString + ".csv";
+        String neuralNetFilePath = dataPath + stockCodeBean.getCode() + "/" + currentDateString + "/neural/" + "neural_" + currentDateString;
+        String predictionFilePath = dataPath + stockCodeBean.getCode() + "/" + currentDateString + "/report/" + "neural_" + currentDateString + ".txt";
 
         StockFileReader fileReader = new StockFileReader();
         List<StockInfo> dataList = fileReader.readMoney163StockDataFile(trainingSetFilePath);
