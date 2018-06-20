@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -111,7 +112,7 @@ public class StockFileReader implements Constants {
         Collections.sort(dataList, new Comparator<StockInfo>() {
 			@Override
 			public int compare(StockInfo o1, StockInfo o2) {
-				return Integer.parseInt(String.valueOf(o1.getDateValue() - o2.getDateValue()));
+				return BigDecimal.valueOf(o1.getDateValue()).compareTo(BigDecimal.valueOf(o2.getDateValue()));
 			}
 		});
         
