@@ -1,28 +1,47 @@
 package com.ckjava.service;
 
 import com.ckjava.bean.StockCodeBean;
-import com.ckjava.xutils.*;
+import com.ckjava.xutils.Constants;
+import com.ckjava.xutils.FileUtils;
+import com.ckjava.xutils.HttpClientUtils;
+import com.ckjava.xutils.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
 @PropertySource(value = { "classpath:app.properties" })
-public class FileDownloadService implements Constants {
+public class DownloadFileService extends FileUtils implements Constants {
 
-    private static final Logger logger = LoggerFactory.getLogger(FileDownloadService.class);
+    private static final Logger logger = LoggerFactory.getLogger(DownloadFileService.class);
 
-    @Value("${dataPath}")
-    private String dataPath;
     @Value("${downloadLimit}")
     private Integer downloadLimit;
+    @Value("${isDownloadRawFile}")
+    private Boolean isDownloadRawFile;
+    @Value("${dateString}")
+    private String dateString;
+    @Autowired
+    private FileService fileService;
+
+    public Boolean getIsDownloadRawFile() {
+        return isDownloadRawFile;
+    }
+
+    public String getDateString() {
+        return dateString;
+    }
 
     /**
      * 从文件中读取股票代码
@@ -34,13 +53,13 @@ public class FileDownloadService implements Constants {
         List<StockCodeBean> dataList = new ArrayList<>();
         String targetString = null;
         try {
-            targetString = FileUtils.readFileContent(new File(dataPath + "stockCode-"+area+".txt"), CHARSET.UTF8);
+            targetString = FileUtils.readFileContent(fileService.getStockCodeFile(area), CHARSET.UTF8);
         } catch (Exception e) {
             logger.error(this.getClass().getName().concat(".getStockCodeList has error"), e);
             return dataList;
         }
         List<String> codeList = extractVariable(targetString);
-        logger.info("getStockCodeList size ={}", codeList.size());
+        logger.info("getStockCodeList size = {}", codeList.size());
         for (int i = 0, c = (downloadLimit > 0 ? downloadLimit : codeList.size()); i < c; i++) {
             dataList.add(new StockCodeBean(codeList.get(i), area, null));
         }
@@ -53,7 +72,12 @@ public class FileDownloadService implements Constants {
      * @param stockCodeBean
      * @return
      */
-    public boolean downloadStockDataFile(StockCodeBean stockCodeBean) {
+    public boolean downloadStockDataFile(String dateString, StockCodeBean stockCodeBean) {
+        File rawDataFile = fileService.getRawDataFile(dateString, stockCodeBean.getCode());
+        if (rawDataFile.exists()) {
+            return true;
+        }
+
         String downloadCode = stockCodeBean.getArea().equals("sh") ? "0".concat(stockCodeBean.getCode()) : "1".concat(stockCodeBean.getCode());
 
         Map<String, String> placeholderMap = new HashMap<>();
@@ -66,12 +90,9 @@ public class FileDownloadService implements Constants {
         descUrl = StringUtils.replaceVariable(descUrl, placeholderMap);
         logger.info("desc url = {}", descUrl);
 
-        String datas = HttpClientUtils.get(url, getHeaders(), null);
+        String result = HttpClientUtils.get(url, getHeaders(), null);
 
-        String dateString = DateUtils.formatTime(new Date().getTime(), "yyyyMMdd");
-        String dataFilePath = dataPath + stockCodeBean.getCode()+ "/" + dateString + "/money163/data_"+ dateString +".csv";
-
-        FileUtils.writeStringToFile(new File(dataFilePath), datas, false, CHARSET.UTF8);
+        writeStringToFile(rawDataFile, result, Boolean.FALSE, CHARSET.UTF8);
 
         return true;
     }

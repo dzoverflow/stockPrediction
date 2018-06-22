@@ -61,7 +61,7 @@ public class Main {
     	String predictionFilePath = dataPath + code + "/report/" + "neural_" + currentDateString + ".txt";
     	
     	StockFileReader fileReader = new StockFileReader();
-    	List<StockInfo> dataList = fileReader.readMoney163StockDataFile(trainingSetFilePath);
+    	List<StockInfo> dataList = fileReader.readMoney163StockDataFile(new File(trainingSetFilePath));
     	
     	// 封装训练数据集
     	TrainingData trainingData = new TrainingData(dataList);

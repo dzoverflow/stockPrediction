@@ -28,12 +28,16 @@ import java.util.List;
 
 import com.ckjava.xutils.Constants;
 import com.ckjava.xutils.DateUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
  * @author Dr.V.Steinhauer
  */
 public class StockFileReader implements Constants {
+
+    private static final Logger logger = LoggerFactory.getLogger(StockFileReader.class);
 
     private int maxCounter;
     private String[] valuesRow;
@@ -62,13 +66,11 @@ public class StockFileReader implements Constants {
         this.setMaxCounter(maxCounter);
     }
 
-    public List<StockInfo> readMoney163StockDataFile(String fileName) {
+    public List<StockInfo> readMoney163StockDataFile(File file) {
     	List<StockInfo> dataList = new ArrayList<>();
-        File file = new File(fileName);
         if (!file.exists()) {
             return dataList;
         }
-        System.out.println("file = " + fileName+". It will be filtered the values for the moment of the market opened");
         int counter = 0;
         try {
             FileInputStream fis = new FileInputStream(file);
@@ -101,13 +103,15 @@ public class StockFileReader implements Constants {
 				}
             }
             fis.close();
-        } catch (IOException ioe) {
-            System.out.println("Oops- an IOException happened.");
-            ioe.printStackTrace();
-            System.exit(1);
+        } catch (IOException e) {
+            logger.error("StockFileReader.readMoney163StockDataFile has error", e);
         }
-        System.out.println("dataList.size=" + dataList.size());
-        
+        logger.info("StockFileReader.readMoney163StockDataFile dataSize={}",  dataList.size());
+        if (dataList.size() > 2) {
+            StockInfo info = dataList.get(1);
+            logger.info("StockFileReader.readMoney163StockDataFile code={}, name={}", info.getCode(), info.getTitle());
+        }
+
         // 倒序排列
         Collections.sort(dataList, new Comparator<StockInfo>() {
 			@Override

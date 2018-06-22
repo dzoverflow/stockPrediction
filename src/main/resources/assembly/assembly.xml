@@ -14,10 +14,6 @@
 			<outputDirectory>lib</outputDirectory>
 		</fileSet>
 		<fileSet>
-			<directory>${project.basedir}/data</directory>
-			<outputDirectory>data</outputDirectory>
-		</fileSet>
-		<fileSet>
 			<directory>${project.build.directory}</directory>
 			<outputDirectory>lib</outputDirectory>
 			<includes>

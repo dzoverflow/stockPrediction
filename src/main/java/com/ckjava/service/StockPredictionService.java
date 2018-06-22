@@ -1,5 +1,6 @@
 package com.ckjava.service;
 
+import com.ckjava.bean.BuyReportBean;
 import com.ckjava.bean.StockCodeBean;
 import com.ckjava.samples.stockmarket.StockFileReader;
 import com.ckjava.samples.stockmarket.StockInfo;
@@ -12,6 +13,7 @@ import org.neuroph.nnet.MultiLayerPerceptron;
 import org.neuroph.nnet.learning.LMS;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Service;
@@ -20,41 +22,35 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Vector;
 
 @Service
 @PropertySource(value = {"classpath:app.properties"})
-public class StockPredictionService implements Constants {
+public class StockPredictionService extends FileUtils implements Constants {
 
-    private static final Logger logger = LoggerFactory.getLogger(FileDownloadService.class);
+    private static final Logger logger = LoggerFactory.getLogger(DownloadFileService.class);
 
-    @Value("${dataPath}")
-    private String dataPath;
+    @Value("${isPrediction}")
+    private Boolean isPrediction;
+    @Autowired
+    private FileService fileService;
 
-    private String currentDateString = DateUtils.formatTime(new Date().getTime(), "yyyyMMdd");
-    public String getDataPath() {
-        return dataPath;
-    }
-    public String getCurrentDateString() {
-        return currentDateString;
+    public Boolean getIsPrediction() {
+        return isPrediction;
     }
 
-    public String doPrediction(StockCodeBean stockCodeBean) {
-        StringBuilder simpleResult = new StringBuilder();
-        simpleResult.append(stockCodeBean.getCode()).append(SPLITER.COLON);
+    public BuyReportBean doPrediction(String dateString, StockCodeBean stockCodeBean) {
+        BuyReportBean buyReportBean = new BuyReportBean(stockCodeBean);
 
         StringBuilder report = new StringBuilder();
 
-        String trainingSetFilePath = dataPath + stockCodeBean.getCode() + "/" + currentDateString + "/money163/" + "data_" + currentDateString + ".csv";
-        String neuralNetFilePath = dataPath + stockCodeBean.getCode() + "/" + currentDateString + "/neural/" + "neural_" + currentDateString;
-        String predictionFilePath = dataPath + stockCodeBean.getCode() + "/" + currentDateString + "/report/" + "neural_" + currentDateString + ".txt";
-
         StockFileReader fileReader = new StockFileReader();
-        List<StockInfo> dataList = fileReader.readMoney163StockDataFile(trainingSetFilePath);
+        List<StockInfo> dataList = fileReader.readMoney163StockDataFile(fileService.getRawDataFile(dateString, stockCodeBean.getCode()));
         if (CollectionUtils.getSize(dataList) <= 0) {
-            return simpleResult.toString();
+            return buyReportBean;
         }
 
         // 封装训练数据集
@@ -63,17 +59,19 @@ public class StockPredictionService implements Constants {
         TrainingSet trainingSet = trainingData.getTrainingSet();
 
         // 使用数据集训练神经网络
-        File neuralFile = new File(neuralNetFilePath);
+        File neuralFile = fileService.getNeuralNetFile(dateString, stockCodeBean.getCode());
         NeuralNetwork neuralNet = null;
-        if (neuralFile.exists()) {
+        if (neuralFile.exists() && neuralFile.length() > 0) {
             try {
                 neuralNet = NeuralNetwork.load(new FileInputStream(neuralFile));
                 logger.info("load exists neural file success");
             } catch (Exception e) {
                 logger.error(this.getClass().getName().concat(".doPrediction has error"), e);
+                return buyReportBean;
             }
         } else {
-            boolean createNeuralFile = FileUtils.createFile(neuralNetFilePath);
+            String neuralNetFilePath = neuralFile.getAbsolutePath();
+            boolean createNeuralFile = createFile(neuralNetFilePath);
             if (createNeuralFile) {
                 logger.info("创建文件:{} 成功", neuralNetFilePath);
             } else {
@@ -92,6 +90,10 @@ public class StockPredictionService implements Constants {
         }
         logger.info("Time stamp N2:" + new SimpleDateFormat("dd-MMM-yyyy HH:mm:ss:MM").format(new Date()));
 
+        if (neuralNet == null) {
+            return buyReportBean;
+        }
+
         // 使用测试集
         // 加载最近的 4 天数据
         TrainingSet testSet = trainingData.getTestTrainingSet();
@@ -99,6 +101,8 @@ public class StockPredictionService implements Constants {
         // 基于当前的预测再预测多少次
         Date now = new Date();
         report.append("start neural prediction").append(StringUtils.LF);
+        BigDecimal totalChange = BigDecimal.ZERO;
+        List<String> plusList = new ArrayList<>();
         for (int i = 0; i < 30; i++) {
             // 获取测试集中的最后一个元素
             TrainingElement testElement = testSet.trainingElements().get(i);
@@ -113,8 +117,12 @@ public class StockPredictionService implements Constants {
             report.append(" Output: " + outputData);
             BigDecimal valueChange = BigDecimal.valueOf(outputData).subtract(BigDecimal.valueOf(testElement.getInput().get(3))).multiply(BigDecimal.valueOf(100d)).setScale(2, BigDecimal.ROUND_HALF_UP);
             if (valueChange.compareTo(BigDecimal.ZERO) > 0) {
-                simpleResult.append("+");
+                plusList.add("+");
             }
+            if (i == 0) {
+                buyReportBean.setFirstChange(valueChange);
+            }
+            totalChange = totalChange.add(valueChange);
             report.append(" 相比上一次变化: " + valueChange.toString()).append(StringUtils.LF);
             // 将预测值再加入到测试集中
             Vector<Double> lastTestInput = testElement.getInput();
@@ -125,11 +133,14 @@ public class StockPredictionService implements Constants {
             testSet.addElement(new TrainingElement(new double[]{d1, d2, d3, d4}));
         }
 
+        buyReportBean.setPlusList(plusList);
+        buyReportBean.setTotalChange(totalChange.setScale(2, BigDecimal.ROUND_HALF_UP));
+
         report.append("Time stamp N3:" + new SimpleDateFormat("dd-MMM-yyyy HH:mm:ss:MM").format(new Date()));
         logger.info("report = {}", report.toString());
 
-        FileUtils.writeStringToFile(new File(predictionFilePath), report.toString(), Boolean.FALSE, Constants.CHARSET.UTF8);
+        FileUtils.writeStringToFile(fileService.getPredictionResultFile(dateString, stockCodeBean.getCode()), report.toString(), Boolean.FALSE, Constants.CHARSET.UTF8);
 
-        return simpleResult.toString();
+        return buyReportBean;
     }
 }

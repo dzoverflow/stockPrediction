@@ -1,10 +1,14 @@
 package com.ckjava.bean;
 
-public class StockCodeBean {
+import com.ckjava.xutils.Constants;
+import com.ckjava.xutils.StringUtils;
+
+public class StockCodeBean implements Constants {
 
     private String code;
     private String area;
     private String name;
+    private String desc;
 
     public String getCode() {
         return code;
@@ -30,6 +34,14 @@ public class StockCodeBean {
         this.area = area;
     }
 
+    public String getDesc() {
+        return desc;
+    }
+
+    public void setDesc(String desc) {
+        this.desc = desc;
+    }
+
     public StockCodeBean(String code, String area, String name) {
         this.code = code;
         this.area = area;
@@ -46,6 +58,14 @@ public class StockCodeBean {
         sb.append(", area='").append(area).append('\'');
         sb.append(", name='").append(name).append('\'');
         sb.append('}');
+        return sb.toString();
+    }
+
+    public String getBlacklistString() {
+        final StringBuilder sb = new StringBuilder();
+        sb.append(code).append(SPLITER.COMMA)
+        .append(area).append(SPLITER.COMMA)
+        .append(desc).append(StringUtils.LF);
         return sb.toString();
     }
 }
