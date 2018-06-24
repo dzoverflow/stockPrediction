@@ -6,7 +6,7 @@ import com.ckjava.xutils.CollectionUtils;
 import com.ckjava.xutils.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Service;
 
@@ -21,8 +21,8 @@ public class BlacklistService extends FileUtils {
 
     private static final Logger logger = LoggerFactory.getLogger(DownloadFileService.class);
 
-    @Value("${dataPath}")
-    private String dataPath;
+    @Autowired
+    private FileService fileService;
 
     /**
      * 初始化黑名单列表
@@ -31,8 +31,7 @@ public class BlacklistService extends FileUtils {
      */
     public List<StockCodeBean> initBlacklist() {
         List<StockCodeBean> dataList = new ArrayList<>();
-        String blacklistFilePath = joinPath(new String[]{ dataPath, "blacklist.txt" });
-        File blacklistFile = new File(blacklistFilePath);
+        File blacklistFile = fileService.getBlacklistFile();
         if (blacklistFile.exists()) {
             try {
                 List<String> originalList = readLines(blacklistFile, CHARSET.UTF8);
@@ -57,10 +56,7 @@ public class BlacklistService extends FileUtils {
      * @param stockCodeBean
      */
     public void putBlacklist(StockCodeBean stockCodeBean) {
-        String blacklistFilePath = joinPath(new String[]{ dataPath, "blacklist.txt" });
-        createFile(blacklistFilePath);
-        File blacklistFile = new File(blacklistFilePath);
-        writeStringToFile(blacklistFile, stockCodeBean.getBlacklistString(), Boolean.TRUE, CHARSET.UTF8);
+        writeStringToFile(fileService.getBlacklistFile(), stockCodeBean.getBlacklistString(), Boolean.TRUE, CHARSET.UTF8);
     }
 
     /**

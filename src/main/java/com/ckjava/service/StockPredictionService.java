@@ -2,11 +2,10 @@ package com.ckjava.service;
 
 import com.ckjava.bean.BuyReportBean;
 import com.ckjava.bean.StockCodeBean;
-import com.ckjava.samples.stockmarket.StockFileReader;
 import com.ckjava.samples.stockmarket.StockInfo;
-import com.ckjava.samples.stockmarket.TrainingData;
 import com.ckjava.xutils.*;
 import org.neuroph.core.NeuralNetwork;
+import org.neuroph.core.learning.SupervisedTrainingElement;
 import org.neuroph.core.learning.TrainingElement;
 import org.neuroph.core.learning.TrainingSet;
 import org.neuroph.nnet.MultiLayerPerceptron;
@@ -22,10 +21,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Vector;
+import java.util.*;
 
 @Service
 @PropertySource(value = {"classpath:app.properties"})
@@ -37,6 +33,10 @@ public class StockPredictionService extends FileUtils implements Constants {
     private Boolean isPrediction;
     @Autowired
     private FileService fileService;
+    @Autowired
+    private StockFileReaderService stockFileReaderService;
+    @Autowired
+    private TrainingDataService trainingDataService;
 
     public Boolean getIsPrediction() {
         return isPrediction;
@@ -47,21 +47,19 @@ public class StockPredictionService extends FileUtils implements Constants {
 
         StringBuilder report = new StringBuilder();
 
-        StockFileReader fileReader = new StockFileReader();
-        List<StockInfo> dataList = fileReader.readMoney163StockDataFile(fileService.getRawDataFile(dateString, stockCodeBean.getCode()));
+        List<StockInfo> dataList = stockFileReaderService.readMoney163StockDataFile(fileService.getRawDataFile(dateString, stockCodeBean.getCode()));
         if (CollectionUtils.getSize(dataList) <= 0) {
             return buyReportBean;
         }
 
         // 封装训练数据集
-        TrainingData trainingData = new TrainingData(dataList);
-        trainingData.setNormolizer(100.00D);
-        TrainingSet trainingSet = trainingData.getTrainingSet();
+        TrainingSet trainingSet = getTrainingSet(dateString, stockCodeBean, dataList);
 
         // 使用数据集训练神经网络
         File neuralFile = fileService.getNeuralNetFile(dateString, stockCodeBean.getCode());
         NeuralNetwork neuralNet = null;
         if (neuralFile.exists() && neuralFile.length() > 0) {
+            logger.info("neuralNetFile 存在，开始加载。。。");
             try {
                 neuralNet = NeuralNetwork.load(new FileInputStream(neuralFile));
                 logger.info("load exists neural file success");
@@ -73,20 +71,26 @@ public class StockPredictionService extends FileUtils implements Constants {
             String neuralNetFilePath = neuralFile.getAbsolutePath();
             boolean createNeuralFile = createFile(neuralNetFilePath);
             if (createNeuralFile) {
-                logger.info("创建文件:{} 成功", neuralNetFilePath);
+                logger.info("创建 neuralNetFile 文件:{} 成功", neuralNetFilePath);
             } else {
-                logger.info("创建文件:{} 失败", neuralNetFilePath);
+                logger.info("创建 neuralNetFile 文件:{} 失败", neuralNetFilePath);
             }
 
-            neuralNet = new MultiLayerPerceptron(4, 9, 1);
-            int maxIterations = 10000;
-            ((LMS) neuralNet.getLearningRule()).setMaxError(0.001);//0-1
-            ((LMS) neuralNet.getLearningRule()).setLearningRate(0.7);//0-1
-            ((LMS) neuralNet.getLearningRule()).setMaxIterations(maxIterations);//0-1
-            neuralNet.learnInSameThread(trainingSet);
-            logger.info("training neural net success");
-            neuralNet.save(neuralNetFilePath);
-            logger.info("save neural file success, path:{}", neuralNetFilePath);
+            try {
+                logger.info("start training neural net");
+                neuralNet = new MultiLayerPerceptron(4, 9, 1);
+                int maxIterations = 10000;
+                ((LMS) neuralNet.getLearningRule()).setMaxError(0.001);//0-1
+                ((LMS) neuralNet.getLearningRule()).setLearningRate(0.7);//0-1
+                ((LMS) neuralNet.getLearningRule()).setMaxIterations(maxIterations);//0-1
+                neuralNet.learnInSameThread(trainingSet);
+                logger.info("training neural net success");
+                neuralNet.save(neuralNetFilePath);
+                logger.info("save neural file success, path:{}", neuralNetFilePath);
+            } catch (Exception e) {
+                logger.error("training neuralNet has error, e");
+            }
+
         }
         logger.info("Time stamp N2:" + new SimpleDateFormat("dd-MMM-yyyy HH:mm:ss:MM").format(new Date()));
 
@@ -96,7 +100,10 @@ public class StockPredictionService extends FileUtils implements Constants {
 
         // 使用测试集
         // 加载最近的 4 天数据
-        TrainingSet testSet = trainingData.getTestTrainingSet();
+        TrainingSet testSet = trainingDataService.getTestTrainingSet(dataList, 100.00D);
+        if (testSet == null || testSet.isEmpty()) {
+            return buyReportBean;
+        }
 
         // 基于当前的预测再预测多少次
         Date now = new Date();
@@ -117,7 +124,7 @@ public class StockPredictionService extends FileUtils implements Constants {
             report.append(" Output: " + outputData);
             BigDecimal valueChange = BigDecimal.valueOf(outputData).subtract(BigDecimal.valueOf(testElement.getInput().get(3))).multiply(BigDecimal.valueOf(100d)).setScale(2, BigDecimal.ROUND_HALF_UP);
             if (valueChange.compareTo(BigDecimal.ZERO) > 0) {
-                plusList.add("+");
+                plusList.add(valueChange.toString().concat(SPLITER.COMMA));
             }
             if (i == 0) {
                 buyReportBean.setFirstChange(valueChange);
@@ -142,5 +149,31 @@ public class StockPredictionService extends FileUtils implements Constants {
         FileUtils.writeStringToFile(fileService.getPredictionResultFile(dateString, stockCodeBean.getCode()), report.toString(), Boolean.FALSE, Constants.CHARSET.UTF8);
 
         return buyReportBean;
+    }
+
+    private TrainingSet getTrainingSet(String dateString, StockCodeBean stockCodeBean, List<StockInfo> dataList) {
+        TrainingSet trainingSet = trainingDataService.getTrainingSet(dataList, 100.00D);
+        if (trainingSet != null) {
+            File trainingSetDataFile = fileService.getTrainingSetDataFile(dateString, stockCodeBean.getCode());
+            if (trainingSetDataFile.exists()) {
+                trainingSetDataFile.delete();
+            }
+
+            StringBuilder trainingData = new StringBuilder();
+            for (Iterator<TrainingElement> it = trainingSet.iterator(); it.hasNext();) {
+                SupervisedTrainingElement trainingElement = (SupervisedTrainingElement) it.next();
+                Vector<Double> vector = trainingElement.getInput();
+
+                StringBuilder data = new StringBuilder();
+                for (Iterator<Double> vit = vector.iterator(); vit.hasNext();) {
+                    data.append(vit.next()).append(SPLITER.COMMA);
+                }
+                data.append(trainingElement.getDesiredOutput().get(0));
+                data.append(StringUtils.LF);
+                trainingData.append(data);
+            }
+            FileUtils.writeStringToFile(trainingSetDataFile, trainingData.toString(), Boolean.TRUE, CHARSET.UTF8);
+        }
+        return trainingSet;
     }
 }

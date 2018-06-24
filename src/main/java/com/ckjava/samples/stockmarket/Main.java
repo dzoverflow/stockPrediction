@@ -24,6 +24,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Vector;
 
+import com.ckjava.service.StockFileReaderService;
+import com.ckjava.service.TrainingDataService;
 import org.neuroph.core.NeuralNetwork;
 import org.neuroph.core.learning.SupervisedTrainingElement;
 import org.neuroph.core.learning.TrainingElement;
@@ -60,13 +62,12 @@ public class Main {
     	String neuralNetFilePath = dataPath + code + "/neural/" + "neural_" + currentDateString;
     	String predictionFilePath = dataPath + code + "/report/" + "neural_" + currentDateString + ".txt";
     	
-    	StockFileReader fileReader = new StockFileReader();
+    	StockFileReaderService fileReader = new StockFileReaderService();
     	List<StockInfo> dataList = fileReader.readMoney163StockDataFile(new File(trainingSetFilePath));
     	
     	// 封装训练数据集
-    	TrainingData trainingData = new TrainingData(dataList);
-    	trainingData.setNormolizer(100.00D);
-    	TrainingSet trainingSet = trainingData.getTrainingSet();
+    	TrainingDataService trainingData = new TrainingDataService();
+    	TrainingSet trainingSet = trainingData.getTrainingSet(dataList, 100.00D);
     	
     	// 使用数据集训练神经网络
     	File neuralFile = new File(neuralNetFilePath);
@@ -97,7 +98,7 @@ public class Main {
 
         // 使用测试集
         // 加载最近的 4 天数据
-        TrainingSet testSet = trainingData.getTestTrainingSet();
+        TrainingSet testSet = trainingData.getTestTrainingSet(dataList, 100.00D);
 
         // 基于当前的预测再预测多少次
         Date now = new Date();

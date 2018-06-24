@@ -13,31 +13,31 @@
  * along with Neuroph. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.ckjava.samples.stockmarket;
+package com.ckjava.service;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import com.ckjava.samples.stockmarket.StockInfo;
+import com.ckjava.xutils.Constants;
+import com.ckjava.xutils.DateUtils;
+import com.ckjava.xutils.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
+import java.io.*;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-import com.ckjava.xutils.Constants;
-import com.ckjava.xutils.DateUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 /**
  *
  * @author Dr.V.Steinhauer
  */
-public class StockFileReader implements Constants {
+@Service
+public class StockFileReaderService implements Constants {
 
-    private static final Logger logger = LoggerFactory.getLogger(StockFileReader.class);
+    private static final Logger logger = LoggerFactory.getLogger(StockFileReaderService.class);
 
     private int maxCounter;
     private String[] valuesRow;
@@ -58,11 +58,11 @@ public class StockFileReader implements Constants {
         this.maxCounter = maxCounter;
     }
 
-    public StockFileReader() {
+    public StockFileReaderService() {
         this.setMaxCounter(100);
     }
 
-    public StockFileReader(int maxCounter) {
+    public StockFileReaderService(int maxCounter) {
         this.setMaxCounter(maxCounter);
     }
 
@@ -77,7 +77,7 @@ public class StockFileReader implements Constants {
             BufferedReader dis = new BufferedReader(new InputStreamReader(fis));
             String s;
             while ((s = dis.readLine()) != null) {
-                String[] s1 = s.split(",");
+                String[] s1 = s.split(SPLITER.COMMA);
                 try {
                 	StockInfo info = new StockInfo();
                 	info.setDate(cleanData(s1[0]));
@@ -96,6 +96,10 @@ public class StockFileReader implements Constants {
                 	info.setDealMoney(cleanData(s1[12]));
                 	info.setMarketValue(cleanData(s1[13]));
                 	info.setCirculateValue(cleanData(s1[14]));
+
+                	if (StringUtils.isBlank(info.getFinalPrice()) || new BigDecimal(info.getFinalPrice()).compareTo(BigDecimal.ZERO) == 0) {
+                	    continue;
+                    }
                 	
                 	dataList.add(info);
                     counter = counter + 1;

@@ -22,6 +22,10 @@ public class FileService extends FileUtils {
         return new File(joinPath(new String[]{ dataPath, dateString, code, "money163", "raw_data.csv" }));
     }
 
+    public File getTrainingSetDataFile(String dateString, String code) {
+        return new File(joinPath(new String[]{ dataPath, dateString, code, "money163", "training_data.csv" }));
+    }
+
     public File getNeuralNetFile(String dateString, String code) {
         return new File(joinPath(new String[]{ dataPath, dateString, code, "neural", "neural.dat" }));
     }
@@ -32,5 +36,9 @@ public class FileService extends FileUtils {
 
     public File getBuyReportFile(String dateString) {
         return new File(joinPath(new String[]{ dataPath, "buyReport_" + dateString + ".txt" }));
+    }
+
+    public File getBlacklistFile() {
+        return new File(joinPath(new String[]{ dataPath, "blacklist.txt" }));
     }
 }

@@ -1,48 +1,28 @@
-/***
- * TrainingData is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * TrainingData is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with Neuroph. If not, see <http://www.gnu.org/licenses/>.
- */
-
-
-package com.ckjava.samples.stockmarket;
+package com.ckjava.service;
 
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 
+import com.ckjava.samples.stockmarket.StockInfo;
 import org.neuroph.core.learning.SupervisedTrainingElement;
 import org.neuroph.core.learning.TrainingElement;
 import org.neuroph.core.learning.TrainingSet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
 
 /**
  *
  * @author Dr.V.Steinhauer
  */
-public class TrainingData {
+@Service
+public class TrainingDataService {
 
-    private List<StockInfo> dataList;
+    private static final Logger logger = LoggerFactory.getLogger(TrainingDataService.class);
+
     private Date limitDate;
-    private TrainingSet trainingSet = new TrainingSet();
-    private double normolizer = 10000.0D;
     private double minlevel = 0.00D;
-
-    public List<StockInfo> getDataList() {
-		return dataList;
-	}
-
-	public void setDataList(List<StockInfo> dataList) {
-		this.dataList = dataList;
-	}
 
 	public double getMinlevel() {
 		return minlevel;
@@ -52,43 +32,16 @@ public class TrainingData {
 		this.minlevel = minlevel;
 	}
 
-	public double getNormolizer() {
-        return normolizer;
-    }
-
-    public void setNormolizer(double normolizer) {
-        this.normolizer = normolizer;
-    }
-
-    public Date getLimitDate() {
-		return limitDate;
-	}
-
-	public void setLimitDate(Date limitDate) {
-		this.limitDate = limitDate;
-	}
-
-	public TrainingData() {
-    }
-    
-    public TrainingData(List<StockInfo> dataList) {
-    	this.dataList = dataList;
-    }
-
-    public TrainingData(List<StockInfo> dataList, Date limitDate) {
-		super();
-		this.dataList = dataList;
-		this.limitDate = limitDate;
-	}
-
-	public TrainingSet getTrainingSet() {
+	public TrainingSet getTrainingSet(List<StockInfo> dataList, double normolizer) {
+        TrainingSet trainingSet = new TrainingSet();
         int length = dataList.size();
         if (length < 5) {
-            System.out.println("dataList.size < 5");
-            return null;
+            logger.warn("dataList.size < 5");
+            return trainingSet;
         }
         try {
-            for (int i = 0, c = dataList.size(); i + 4 < c; i++) {
+            int print = 0;
+            for (int i = 0, c = dataList.size(); i+4 < c; i++) {
             	if (limitDate != null && dataList.get(i).getDateValue() < limitDate.getTime()) {
             		continue;
             	}
@@ -106,30 +59,29 @@ public class TrainingData {
                 double d5 = BigDecimal.valueOf(Double.parseDouble(s5) - minlevel).divide(BigDecimal.valueOf(normolizer), 4, BigDecimal.ROUND_HALF_UP).doubleValue();
                 trainingSet.addElement(new SupervisedTrainingElement(new double[]{d1, d2, d3, d4}, new double[]{d5}));
                 
-                i += 3;
-                
-                if (i > c-10) {
-                	System.out.println(i + " " + d1 + " " + d2 + " " + d3 + " " + d4 + " ->" + d5);	
+                if (print < 10) {
+                    logger.info("加载训练数据:" + print + " " + d1 + " " + d2 + " " + d3 + " " + d4 + " ->" + d5);
                 }
+
+                print ++;
             }
+
+            logger.info("finish load TrainingSet");
+
+            return trainingSet;
         } catch (Exception e) {
-            System.out.println(e.getMessage());
-            return null;
+            logger.error("TrainingDataService.getTrainingSet has error", e);
+            return trainingSet;
         }
-        
-        
-        System.out.println("finish load TrainingSet");
-        
-        return trainingSet;
     }
     
-    public TrainingSet getTestTrainingSet() {
+    public TrainingSet getTestTrainingSet(List<StockInfo> dataList, double normolizer) {
+        TrainingSet testTrainingSet = new TrainingSet();
         int length = dataList.size();
         if (length < 5) {
-            System.out.println("dataList.size < 5");
-            return null;
+            logger.warn("dataList.size < 5");
+            return testTrainingSet;
         }
-        TrainingSet testTrainingSet = new TrainingSet();
         try {
             for (int i = dataList.size(); i >0;) {
                 String s1 = dataList.get(i-4).getFinalPrice();
@@ -145,18 +97,13 @@ public class TrainingData {
                 
                 break;
             }
+
+            logger.info("finish load TestTrainingSet");
+            return testTrainingSet;
         } catch (Exception e) {
-            System.out.println(e.getMessage());
-            return null;
+            logger.error("TrainingDataService.getTrainingSet has error", e);
+            return testTrainingSet;
         }
-        System.out.println("finish load TestTrainingSet");
-        
-        return testTrainingSet;
     }
 
-    public void setTrainingSet(TrainingSet trainingSet) {
-        this.trainingSet = trainingSet;
-    }
-
-    
 }
