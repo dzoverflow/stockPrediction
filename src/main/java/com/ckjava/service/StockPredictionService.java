@@ -156,7 +156,7 @@ public class StockPredictionService extends FileUtils implements Constants {
         if (trainingSet != null) {
             File trainingSetDataFile = fileService.getTrainingSetDataFile(dateString, stockCodeBean.getCode());
             if (trainingSetDataFile.exists()) {
-                trainingSetDataFile.delete();
+                return trainingSet;
             }
 
             StringBuilder trainingData = new StringBuilder();
