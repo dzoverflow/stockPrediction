@@ -63,7 +63,7 @@ public class Run extends FileUtils {
             List<PredictionRunner> runnerList = new ArrayList<>();
             for (int i = 0, c = CollectionUtils.getSize(dataList); i < c; i++) {
                 StockCodeBean stockCodeBean = dataList.get(i);
-                runnerList.add(new PredictionRunner(stockPredictionService, stockCodeBean, dateString));
+                runnerList.add(new PredictionRunner(stockPredictionService, fileService, stockCodeBean, dateString));
             }
 
             try {

@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import java.io.File;
 import java.io.FileInputStream;
 import java.math.BigDecimal;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -27,7 +28,7 @@ import java.util.*;
 @PropertySource(value = {"classpath:app.properties"})
 public class StockPredictionService extends FileUtils implements Constants {
 
-    private static final Logger logger = LoggerFactory.getLogger(DownloadFileService.class);
+    private static final Logger logger = LoggerFactory.getLogger(StockPredictionService.class);
 
     @Value("${isPrediction}")
     private Boolean isPrediction;
@@ -37,6 +38,8 @@ public class StockPredictionService extends FileUtils implements Constants {
     private StockFileReaderService stockFileReaderService;
     @Autowired
     private TrainingDataService trainingDataService;
+
+    private NumberFormat nt = NumberFormat.getPercentInstance();
 
     public Boolean getIsPrediction() {
         return isPrediction;
@@ -110,6 +113,7 @@ public class StockPredictionService extends FileUtils implements Constants {
         report.append("start neural prediction").append(StringUtils.LF);
         BigDecimal totalChange = BigDecimal.ZERO;
         List<String> plusList = new ArrayList<>();
+        nt.setMinimumFractionDigits(2);
         for (int i = 0; i < 30; i++) {
             // 获取测试集中的最后一个元素
             TrainingElement testElement = testSet.trainingElements().get(i);
@@ -122,9 +126,12 @@ public class StockPredictionService extends FileUtils implements Constants {
 
             report.append(DateUtils.formatTime(now.getTime(), "yyyy-MM-dd") + " " + (i + 1) + " -> Input: " + testElement.getInput());
             report.append(" Output: " + outputData);
-            BigDecimal valueChange = BigDecimal.valueOf(outputData).subtract(BigDecimal.valueOf(testElement.getInput().get(3))).multiply(BigDecimal.valueOf(100d)).setScale(2, BigDecimal.ROUND_HALF_UP);
+            BigDecimal lastFinalPrice = BigDecimal.valueOf(testElement.getInput().get(3)).multiply(BigDecimal.valueOf(100d));
+            BigDecimal pridictionPrice = BigDecimal.valueOf(outputData).multiply(BigDecimal.valueOf(100d));
+            BigDecimal valueChange = pridictionPrice.subtract(lastFinalPrice).setScale(2, BigDecimal.ROUND_HALF_UP);
             if (valueChange.compareTo(BigDecimal.ZERO) > 0) {
-                plusList.add(valueChange.toString().concat(SPLITER.COMMA));
+                BigDecimal valueChangePercent = valueChange.divide(lastFinalPrice, 4, BigDecimal.ROUND_HALF_UP);
+                plusList.add(valueChange.toString().concat(SPLITER.AT).concat(nt.format(valueChangePercent)).concat(SPLITER.COMMA));
             }
             if (i == 0) {
                 buyReportBean.setFirstChange(valueChange);
