@@ -5,6 +5,7 @@ import com.ckjava.xutils.Constants;
 import com.ckjava.xutils.FileUtils;
 import com.ckjava.xutils.HttpClientUtils;
 import com.ckjava.xutils.StringUtils;
+import com.ckjava.xutils.http.HttpResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,8 +31,10 @@ public class DownloadFileService extends FileUtils implements Constants {
     private Integer downloadLimit;
     @Value("${isDownloadRawFile}")
     private Boolean isDownloadRawFile;
-    @Value("${dateString}")
-    private String dateString;
+    @Value("${downloadDateString}")
+    private String downloadDateString;
+    @Value("${areaCode}")
+    private String areaCode;
     @Autowired
     private FileService fileService;
 
@@ -39,29 +42,31 @@ public class DownloadFileService extends FileUtils implements Constants {
         return isDownloadRawFile;
     }
 
-    public String getDateString() {
-        return dateString;
+    public String getDownloadDateString() {
+        return downloadDateString;
     }
 
     /**
      * 从文件中读取股票代码
      *
-     * @param area
      * @return
      */
-    public List<StockCodeBean> getStockCodeList(String area) {
+    public List<StockCodeBean> getStockCodeList() {
+        String[] areas = areaCode.split(SPLITER.COMMA);
         List<StockCodeBean> dataList = new ArrayList<>();
-        String targetString = null;
-        try {
-            targetString = FileUtils.readFileContent(fileService.getStockCodeFile(area), CHARSET.UTF8);
-        } catch (Exception e) {
-            logger.error(this.getClass().getName().concat(".getStockCodeList has error"), e);
-            return dataList;
-        }
-        List<String> codeList = extractVariable(targetString);
-        logger.info("getStockCodeList size = {}", codeList.size());
-        for (int i = 0, c = (downloadLimit > 0 ? downloadLimit : codeList.size()); i < c; i++) {
-            dataList.add(new StockCodeBean(codeList.get(i), area, null));
+        for (String area: areas) {
+            String targetString = null;
+            try {
+                targetString = FileUtils.readFileContent(fileService.getStockCodeFile(area), CHARSET.UTF8);
+            } catch (Exception e) {
+                logger.error(this.getClass().getName().concat(".getStockCodeList has error"), e);
+                return dataList;
+            }
+            List<String> codeList = extractVariable(targetString);
+            logger.info("getStockCodeList size = {}", codeList.size());
+            for (int i = 0, c = (downloadLimit > 0 ? downloadLimit : codeList.size()); i < c; i++) {
+                dataList.add(new StockCodeBean(codeList.get(i), area, null));
+            }
         }
         return dataList;
     }
@@ -90,9 +95,9 @@ public class DownloadFileService extends FileUtils implements Constants {
         descUrl = StringUtils.replaceVariable(descUrl, placeholderMap);
         logger.info("desc url = {}", descUrl);
 
-        String result = HttpClientUtils.get(url, getHeaders(), null);
+        HttpResult result = HttpClientUtils.get(url, getHeaders(), null);
 
-        writeStringToFile(rawDataFile, result, Boolean.FALSE, CHARSET.UTF8);
+        writeStringToFile(rawDataFile, result.getBodyString(), Boolean.FALSE, CHARSET.UTF8);
 
         return true;
     }

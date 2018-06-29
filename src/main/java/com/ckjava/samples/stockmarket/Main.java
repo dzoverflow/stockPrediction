@@ -48,7 +48,7 @@ public class Main {
 
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
 	
-    public static void main(String[] args) throws FileNotFoundException, ParseException {
+    /*public static void main(String[] args) throws FileNotFoundException, ParseException {
     	String dataPath = "D:/git-workspace/stockPrediction/data/";
     	String code = "601899";
     	Date currentDate = DateUtils.parseDate("20180515", "yyyyMMdd");
@@ -130,7 +130,7 @@ public class Main {
         System.out.println(report.toString());
         
         FileUtils.writeStringToFile(new File(predictionFilePath), report.toString(), Boolean.FALSE, Constants.CHARSET.UTF8);
-    }
+    }*/
 
 	public static void test1() {
 		System.out.println("Time stamp N1:" + new SimpleDateFormat("dd-MMM-yyyy HH:mm:ss:MM").format(new Date()));

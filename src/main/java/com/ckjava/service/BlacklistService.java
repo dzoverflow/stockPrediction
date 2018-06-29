@@ -24,13 +24,15 @@ public class BlacklistService extends FileUtils {
     @Autowired
     private FileService fileService;
 
+    private List<StockCodeBean> blacklist;
+
     /**
      * 初始化黑名单列表
      *
      * @return
      */
-    public List<StockCodeBean> initBlacklist() {
-        List<StockCodeBean> dataList = new ArrayList<>();
+    private synchronized void initBlacklist() {
+        blacklist = new ArrayList<>();
         File blacklistFile = fileService.getBlacklistFile();
         if (blacklistFile.exists()) {
             try {
@@ -38,15 +40,14 @@ public class BlacklistService extends FileUtils {
                 for (int i = 0, c = CollectionUtils.getSize(originalList); i < c; i++) {
                     String dataString = originalList.get(i);
                     String[] datas = dataString.split(SPLITER.COMMA);
-                    dataList.add(new StockCodeBean(ArrayUtils.getValue(datas, 0), ArrayUtils.getValue(datas, 1), null));
+                    blacklist.add(new StockCodeBean(ArrayUtils.getValue(datas, 0), ArrayUtils.getValue(datas, 1), null));
                 }
-                return dataList;
+                logger.info("BlacklistService.initBlacklist success");
             } catch (IOException e) {
                 logger.error("BlacklistService.initBlacklist has error", e);
-                return dataList;
             }
         } else {
-            return dataList;
+            createFile(blacklistFile.getAbsolutePath());
         }
     }
 
@@ -55,18 +56,22 @@ public class BlacklistService extends FileUtils {
      *
      * @param stockCodeBean
      */
-    public void putBlacklist(StockCodeBean stockCodeBean) {
-        writeStringToFile(fileService.getBlacklistFile(), stockCodeBean.getBlacklistString(), Boolean.TRUE, CHARSET.UTF8);
+    public synchronized void putBlacklist(StockCodeBean stockCodeBean) {
+        if (!isInBlacklist(stockCodeBean)) {
+            writeStringToFile(fileService.getBlacklistFile(), stockCodeBean.getBlacklistString(), Boolean.TRUE, CHARSET.UTF8);
+        }
     }
 
     /**
      * 判断是否在黑名单中
      *
-     * @param blacklist
      * @param stockCodeBean
      * @return
      */
-    public boolean isInBlacklist(List<StockCodeBean> blacklist, StockCodeBean stockCodeBean) {
+    public synchronized boolean isInBlacklist(StockCodeBean stockCodeBean) {
+        if (blacklist == null) {
+            initBlacklist();
+        }
         for (int i = 0, c = CollectionUtils.getSize(blacklist); i < c; i++) {
             StockCodeBean codeBean = blacklist.get(i);
             if (codeBean.getCode().equals(stockCodeBean.getCode())

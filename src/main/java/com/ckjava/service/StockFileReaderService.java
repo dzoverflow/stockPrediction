@@ -15,12 +15,14 @@
 
 package com.ckjava.service;
 
+import com.ckjava.bean.StockCodeBean;
 import com.ckjava.samples.stockmarket.StockInfo;
 import com.ckjava.xutils.Constants;
 import com.ckjava.xutils.DateUtils;
 import com.ckjava.xutils.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
@@ -38,6 +40,11 @@ import java.util.List;
 public class StockFileReaderService implements Constants {
 
     private static final Logger logger = LoggerFactory.getLogger(StockFileReaderService.class);
+
+    @Autowired
+    private BlacklistService blacklistService;
+    @Autowired
+    private FileService fileService;
 
     private int maxCounter;
     private String[] valuesRow;
@@ -66,7 +73,8 @@ public class StockFileReaderService implements Constants {
         this.setMaxCounter(maxCounter);
     }
 
-    public List<StockInfo> readMoney163StockDataFile(File file) {
+    public List<StockInfo> readMoney163StockDataFile(String dataDateString, StockCodeBean stockCodeBean) {
+        File file = fileService.getRawDataFile(dataDateString, stockCodeBean.getCode());
     	List<StockInfo> dataList = new ArrayList<>();
         if (!file.exists()) {
             return dataList;
@@ -79,11 +87,20 @@ public class StockFileReaderService implements Constants {
             while ((s = dis.readLine()) != null) {
                 String[] s1 = s.split(SPLITER.COMMA);
                 try {
+                    // 判断是否是 *ST 的
+                    String code = cleanData(s1[1]);
+                    String title = cleanData(s1[2]);
+                    if (StringUtils.isNotBlank(title) && title.contains("*ST")) {
+                        stockCodeBean.setDesc(title);
+                        blacklistService.putBlacklist(stockCodeBean);
+                        return Collections.EMPTY_LIST;
+                    }
+
                 	StockInfo info = new StockInfo();
                 	info.setDate(cleanData(s1[0]));
                 	info.setDateValue(DateUtils.parseDate(cleanData(s1[0]), TIMEFORMAT.DATE).getTime());
-                	info.setCode(cleanData(s1[1]));
-                	info.setTitle(cleanData(s1[2]));
+                	info.setCode(code);
+                	info.setTitle(title);
                 	info.setFinalPrice(cleanData(s1[3]));
                 	info.setHighestPrice(cleanData(s1[4]));
                 	info.setLowestPrice(cleanData(s1[5]));

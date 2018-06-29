@@ -17,22 +17,24 @@ public class PredictionRunner extends FileUtils implements Callable<BuyReportBea
     private StockPredictionService stockPredictionService;
     private FileService fileService;
     private StockCodeBean stockCodeBean;
-    private String dateString;
+    private String dataDateString;
+    private String neuralDateString;
 
-    public PredictionRunner(StockPredictionService stockPredictionService, FileService fileService, StockCodeBean stockCodeBean, String dateString) {
+    public PredictionRunner(StockPredictionService stockPredictionService, FileService fileService, StockCodeBean stockCodeBean, String dataDateString, String neuralDateString) {
         this.stockPredictionService = stockPredictionService;
         this.fileService = fileService;
         this.stockCodeBean = stockCodeBean;
-        this.dateString = dateString;
+        this.dataDateString = dataDateString;
+        this.neuralDateString = neuralDateString;
     }
 
     @Override
     public BuyReportBean call() throws Exception {
-        BuyReportBean buyReportBean = stockPredictionService.doPrediction(dateString, stockCodeBean);
+        BuyReportBean buyReportBean = stockPredictionService.doPrediction(dataDateString, neuralDateString, stockCodeBean);
         if (CollectionUtils.getSize(buyReportBean.getPlusList()) > 0
                 && buyReportBean.getTotalChange().compareTo(BigDecimal.ZERO) > 0) {
 
-            FileUtils.writeStringToFile(fileService.getBuyReportFile(dateString), buyReportBean.toString().concat(StringUtils.LF), Boolean.TRUE, Constants.CHARSET.UTF8);
+            FileUtils.writeStringToFile(fileService.getBuyReportFile(dataDateString), buyReportBean.toString().concat(StringUtils.LF), Boolean.TRUE, Constants.CHARSET.UTF8);
         }
 
         return buyReportBean;

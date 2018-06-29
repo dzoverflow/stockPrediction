@@ -3,6 +3,7 @@ package com.ckjava;
 import com.ckjava.xutils.FileUtils;
 import com.ckjava.xutils.HttpClientUtils;
 import com.ckjava.xutils.StringUtils;
+import com.ckjava.xutils.http.HttpResult;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -48,9 +49,9 @@ public class TestGetStockData {
 		String url = "http://quotes.money.163.com/service/chddata.html?code=${code}&start=20080425&end=20180515&fields=TCLOSE;HIGH;LOW;TOPEN;LCLOSE;CHG;PCHG;TURNOVER;VOTURNOVER;VATURNOVER;TCAP;MCAP";
 		url = StringUtils.replaceVariable(url, placeholderMap);
 
-		String datas = HttpClientUtils.get(url, null, null);
+		HttpResult datas = HttpClientUtils.get(url, null, null);
 		
-		FileUtils.writeStringToFile(new File("C:\\Users\\ck\\Downloads" + code + "_data.txt"), datas, false, "UTF-8");
+		FileUtils.writeStringToFile(new File("C:\\Users\\ck\\Downloads" + code + "_data.txt"), datas.getBodyString(), false, "UTF-8");
 	}
 
 }

@@ -32,6 +32,10 @@ public class StockPredictionService extends FileUtils implements Constants {
 
     @Value("${isPrediction}")
     private Boolean isPrediction;
+    @Value("${dataDateString}")
+    private String dataDateString;
+    @Value("${neuralDateString}")
+    private String neuralDateString;
     @Autowired
     private FileService fileService;
     @Autowired
@@ -39,27 +43,36 @@ public class StockPredictionService extends FileUtils implements Constants {
     @Autowired
     private TrainingDataService trainingDataService;
 
+    public String getDataDateString() {
+        return dataDateString;
+    }
+
+    public String getNeuralDateString() {
+        return neuralDateString;
+    }
+
     private NumberFormat nt = NumberFormat.getPercentInstance();
 
     public Boolean getIsPrediction() {
         return isPrediction;
     }
 
-    public BuyReportBean doPrediction(String dateString, StockCodeBean stockCodeBean) {
+    public BuyReportBean doPrediction(String dataDateString, String neuralDateString, StockCodeBean stockCodeBean) {
         BuyReportBean buyReportBean = new BuyReportBean(stockCodeBean);
 
         StringBuilder report = new StringBuilder();
 
-        List<StockInfo> dataList = stockFileReaderService.readMoney163StockDataFile(fileService.getRawDataFile(dateString, stockCodeBean.getCode()));
+        // 加载原始数据文件
+        List<StockInfo> dataList = stockFileReaderService.readMoney163StockDataFile(dataDateString, stockCodeBean);
         if (CollectionUtils.getSize(dataList) <= 0) {
             return buyReportBean;
         }
 
         // 封装训练数据集
-        TrainingSet trainingSet = getTrainingSet(dateString, stockCodeBean, dataList);
+        TrainingSet trainingSet = getTrainingSet(dataDateString, stockCodeBean, dataList);
 
         // 使用数据集训练神经网络
-        File neuralFile = fileService.getNeuralNetFile(dateString, stockCodeBean.getCode());
+        File neuralFile = fileService.getNeuralNetFile(neuralDateString, stockCodeBean.getCode());
         NeuralNetwork neuralNet = null;
         if (neuralFile.exists() && neuralFile.length() > 0) {
             logger.info("neuralNetFile 存在，开始加载。。。");
@@ -129,12 +142,13 @@ public class StockPredictionService extends FileUtils implements Constants {
             BigDecimal lastFinalPrice = BigDecimal.valueOf(testElement.getInput().get(3)).multiply(BigDecimal.valueOf(100d));
             BigDecimal pridictionPrice = BigDecimal.valueOf(outputData).multiply(BigDecimal.valueOf(100d));
             BigDecimal valueChange = pridictionPrice.subtract(lastFinalPrice).setScale(2, BigDecimal.ROUND_HALF_UP);
+            BigDecimal valueChangePercent = BigDecimal.ZERO;
             if (valueChange.compareTo(BigDecimal.ZERO) > 0) {
-                BigDecimal valueChangePercent = valueChange.divide(lastFinalPrice, 4, BigDecimal.ROUND_HALF_UP);
+                valueChangePercent = valueChange.divide(lastFinalPrice, 4, BigDecimal.ROUND_HALF_UP);
                 plusList.add(valueChange.toString().concat(SPLITER.AT).concat(nt.format(valueChangePercent)).concat(SPLITER.COMMA));
             }
             if (i == 0) {
-                buyReportBean.setFirstChange(valueChange);
+                buyReportBean.setFirstChange(valueChangePercent);
             }
             totalChange = totalChange.add(valueChange);
             report.append(" 相比上一次变化: " + valueChange.toString()).append(StringUtils.LF);
@@ -153,15 +167,15 @@ public class StockPredictionService extends FileUtils implements Constants {
         report.append("Time stamp N3:" + new SimpleDateFormat("dd-MMM-yyyy HH:mm:ss:MM").format(new Date()));
         logger.info("report = {}", report.toString());
 
-        FileUtils.writeStringToFile(fileService.getPredictionResultFile(dateString, stockCodeBean.getCode()), report.toString(), Boolean.FALSE, Constants.CHARSET.UTF8);
+        FileUtils.writeStringToFile(fileService.getPredictionResultFile(dataDateString, stockCodeBean.getCode()), report.toString(), Boolean.FALSE, Constants.CHARSET.UTF8);
 
         return buyReportBean;
     }
 
-    private TrainingSet getTrainingSet(String dateString, StockCodeBean stockCodeBean, List<StockInfo> dataList) {
+    private TrainingSet getTrainingSet(String dataDateString, StockCodeBean stockCodeBean, List<StockInfo> dataList) {
         TrainingSet trainingSet = trainingDataService.getTrainingSet(dataList, 100.00D);
         if (trainingSet != null) {
-            File trainingSetDataFile = fileService.getTrainingSetDataFile(dateString, stockCodeBean.getCode());
+            File trainingSetDataFile = fileService.getTrainingSetDataFile(dataDateString, stockCodeBean.getCode());
             if (trainingSetDataFile.exists()) {
                 return trainingSet;
             }

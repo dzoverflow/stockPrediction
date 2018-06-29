@@ -27,25 +27,23 @@ public class Run extends FileUtils {
         FileService fileService = appc.getBean(FileService.class);
         ThreadService threadService = appc.getBean(ThreadService.class);
 
-        String dateString = downloadFileService.getDateString();
-        if (StringUtils.isBlank(dateString)) {
-            dateString = DateUtils.formatTime(new Date().getTime(), "yyyyMMdd");
+        String downloadDateString = downloadFileService.getDownloadDateString();
+        if (StringUtils.isBlank(downloadDateString)) {
+            downloadDateString = DateUtils.formatTime(new Date().getTime(), "yyyyMMdd");
         }
 
-        // 初始化黑名单
-        List<StockCodeBean> blacklist = blacklistService.initBlacklist();
         // 读取股票编码
-        List<StockCodeBean> dataList = downloadFileService.getStockCodeList("sh");
+        List<StockCodeBean> dataList = downloadFileService.getStockCodeList();
 
         // 下载股票数据文件
         if (downloadFileService.getIsDownloadRawFile()) {
             for (int i = 0, c = CollectionUtils.getSize(dataList); i < c; i++) {
                 StockCodeBean stockCodeBean = dataList.get(i);
-                if (blacklistService.isInBlacklist(blacklist, stockCodeBean)) { // 如果在黑名单中就不再下载了
+                if (blacklistService.isInBlacklist(stockCodeBean)) { // 如果在黑名单中就不再下载了
                     continue;
                 }
 
-                downloadFileService.downloadStockDataFile(dateString, stockCodeBean);
+                downloadFileService.downloadStockDataFile(downloadDateString, stockCodeBean);
                 try {
                     long sleepTime = RandomUtils.nextLong(100, 2000);
                     Thread.currentThread().sleep(sleepTime);
@@ -58,12 +56,22 @@ public class Run extends FileUtils {
             logger.info("取消下载股票数据文件");
         }
 
+        String dataDateString = stockPredictionService.getDataDateString();
+        if (StringUtils.isBlank(dataDateString)) {
+            dataDateString = DateUtils.formatTime(new Date().getTime(), "yyyyMMdd");
+        }
+
+        String neuralDateString = stockPredictionService.getNeuralDateString();
+        if (StringUtils.isBlank(neuralDateString)) {
+            neuralDateString = DateUtils.formatTime(new Date().getTime(), "yyyyMMdd");
+        }
+
         // 分析预测
         if (stockPredictionService.getIsPrediction()) {
             List<PredictionRunner> runnerList = new ArrayList<>();
             for (int i = 0, c = CollectionUtils.getSize(dataList); i < c; i++) {
                 StockCodeBean stockCodeBean = dataList.get(i);
-                runnerList.add(new PredictionRunner(stockPredictionService, fileService, stockCodeBean, dateString));
+                runnerList.add(new PredictionRunner(stockPredictionService, fileService, stockCodeBean, dataDateString, neuralDateString));
             }
 
             try {
@@ -93,7 +101,7 @@ public class Run extends FileUtils {
                     }
                 }
 
-                FileUtils.writeStringToFile(fileService.getBuyReportFile(dateString), buyReport.toString(), Boolean.FALSE, Constants.CHARSET.UTF8);
+                FileUtils.writeStringToFile(fileService.getBuyReportFile(downloadDateString), buyReport.toString(), Boolean.FALSE, Constants.CHARSET.UTF8);
                 logger.info(buyReport.toString());
 
             } catch (Exception e) {
