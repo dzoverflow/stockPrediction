@@ -121,6 +121,9 @@ public class StockPredictionService extends FileUtils implements Constants {
             return buyReportBean;
         }
 
+        // 找到最近连续上涨幅度超过 n% 的股票
+        findLastNUp(testSet, dataDateString, stockCodeBean);
+
         // 基于当前的预测再预测多少次
         Date now = new Date();
         report.append("start neural prediction").append(StringUtils.LF);
@@ -170,6 +173,40 @@ public class StockPredictionService extends FileUtils implements Constants {
         FileUtils.writeStringToFile(fileService.getPredictionResultFile(dataDateString, stockCodeBean.getCode()), report.toString(), Boolean.FALSE, Constants.CHARSET.UTF8);
 
         return buyReportBean;
+    }
+
+    private void findLastNUp(TrainingSet testSet, String dataDateString, StockCodeBean stockCodeBean) {
+        TrainingElement testElement = testSet.trainingElements().get(0);
+        Vector<Double> lastTestInput = testElement.getInput();
+        double d0 = lastTestInput.get(0);
+        double d1 = lastTestInput.get(1);
+        double d2 = lastTestInput.get(2);
+        double d3 = lastTestInput.get(3);
+        if (d0 <= 0 || d1 <= 0 || d2 <= 0 || d3 <= 0) {
+            return;
+        }
+        // 连续3天的涨幅
+        BigDecimal up1 = BigDecimal.valueOf(d1).subtract(BigDecimal.valueOf(d0)).divide(BigDecimal.valueOf(d0), 4, BigDecimal.ROUND_HALF_UP);
+        BigDecimal up2 = BigDecimal.valueOf(d2).subtract(BigDecimal.valueOf(d1)).divide(BigDecimal.valueOf(d1), 4, BigDecimal.ROUND_HALF_UP);
+        BigDecimal up3 = BigDecimal.valueOf(d3).subtract(BigDecimal.valueOf(d2)).divide(BigDecimal.valueOf(d2), 4, BigDecimal.ROUND_HALF_UP);
+        StringBuilder data = new StringBuilder();
+
+        // 分别超过 1% 到 10%
+        BigDecimal upFactor = BigDecimal.ZERO;
+        for (int i = 1; i <= 10; i++) {
+            BigDecimal up = BigDecimal.valueOf(i/100D);
+            if (up1.compareTo(up) >= 0
+                    && up2.compareTo(up) >= 0
+                    && up3.compareTo(up) >= 0) {
+                upFactor = up;
+            }
+        }
+
+        if (upFactor.compareTo(BigDecimal.ZERO) > 0) {
+            stockCodeBean.setDesc("最近连续3天上涨:" + nt.format(upFactor));
+            data.append(stockCodeBean.toString()).append(StringUtils.LF);
+            writeStringToFile(fileService.getNUpFile(dataDateString), data.toString(), Boolean.TRUE, Constants.CHARSET.UTF8);
+        }
     }
 
     private TrainingSet getTrainingSet(String dataDateString, StockCodeBean stockCodeBean, List<StockInfo> dataList) {

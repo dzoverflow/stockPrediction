@@ -53,11 +53,11 @@ public class StockCodeBean implements Constants {
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("StockCodeBean{");
+        final StringBuilder sb = new StringBuilder();
         sb.append("code='").append(code).append('\'');
         sb.append(", area='").append(area).append('\'');
         sb.append(", name='").append(name).append('\'');
-        sb.append('}');
+        sb.append(", desc='").append(desc).append('\'');
         return sb.toString();
     }
 

@@ -71,6 +71,9 @@ public class Run extends FileUtils {
             List<PredictionRunner> runnerList = new ArrayList<>();
             for (int i = 0, c = CollectionUtils.getSize(dataList); i < c; i++) {
                 StockCodeBean stockCodeBean = dataList.get(i);
+                if (blacklistService.isInBlacklist(stockCodeBean)) { // 如果在黑名单中就不再预测了
+                    continue;
+                }
                 runnerList.add(new PredictionRunner(stockPredictionService, fileService, stockCodeBean, dataDateString, neuralDateString));
             }
 
@@ -96,12 +99,12 @@ public class Run extends FileUtils {
                 StringBuilder buyReport = new StringBuilder();
                 for (BuyReportBean buyReportBean: buyReportBeanList) {
                     if (CollectionUtils.getSize(buyReportBean.getPlusList()) > 0
-                            && buyReportBean.getTotalChange().compareTo(BigDecimal.ZERO) > 0) {
+                            && buyReportBean.getFirstChange().compareTo(BigDecimal.ZERO) > 0) {
                         buyReport.append(buyReportBean.toString()).append(StringUtils.LF);
                     }
                 }
 
-                FileUtils.writeStringToFile(fileService.getBuyReportFile(downloadDateString), buyReport.toString(), Boolean.FALSE, Constants.CHARSET.UTF8);
+                FileUtils.writeStringToFile(fileService.getBuyReportFile(dataDateString), buyReport.toString(), Boolean.FALSE, Constants.CHARSET.UTF8);
                 logger.info(buyReport.toString());
 
             } catch (Exception e) {

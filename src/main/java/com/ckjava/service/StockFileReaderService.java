@@ -90,7 +90,7 @@ public class StockFileReaderService implements Constants {
                     // 判断是否是 *ST 的
                     String code = cleanData(s1[1]);
                     String title = cleanData(s1[2]);
-                    if (StringUtils.isNotBlank(title) && title.contains("*ST")) {
+                    if (StringUtils.isNotBlank(title) && title.contains("ST")) {
                         stockCodeBean.setDesc(title);
                         blacklistService.putBlacklist(stockCodeBean);
                         return Collections.EMPTY_LIST;

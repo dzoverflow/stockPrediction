@@ -38,6 +38,10 @@ public class FileService extends FileUtils {
         return new File(joinPath(new String[]{ dataPath, "buyReport_" + dateString + ".txt" }));
     }
 
+    public File getNUpFile(String dateString) {
+        return new File(joinPath(new String[]{ dataPath, "buyReport_nup_" + dateString + ".txt" }));
+    }
+
     public File getBlacklistFile() {
         return new File(joinPath(new String[]{ dataPath, "blacklist.txt" }));
     }
