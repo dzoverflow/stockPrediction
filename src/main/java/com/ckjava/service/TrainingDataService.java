@@ -1,15 +1,24 @@
 package com.ckjava.service;
 
+import java.io.File;
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Vector;
 
+import com.ckjava.bean.StockCodeBean;
 import com.ckjava.samples.stockmarket.StockInfo;
+import com.ckjava.xutils.CollectionUtils;
+import com.ckjava.xutils.Constants;
+import com.ckjava.xutils.FileUtils;
+import com.ckjava.xutils.StringUtils;
 import org.neuroph.core.learning.SupervisedTrainingElement;
 import org.neuroph.core.learning.TrainingElement;
 import org.neuroph.core.learning.TrainingSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -20,6 +29,11 @@ import org.springframework.stereotype.Service;
 public class TrainingDataService {
 
     private static final Logger logger = LoggerFactory.getLogger(TrainingDataService.class);
+
+    @Autowired
+    private FileService fileService;
+    @Autowired
+    private StockFileReaderService stockFileReaderService;
 
     private Date limitDate;
     private double minlevel = 0.00D;
@@ -32,8 +46,22 @@ public class TrainingDataService {
 		this.minlevel = minlevel;
 	}
 
-	public TrainingSet getTrainingSet(List<StockInfo> dataList, double normolizer) {
+    /**
+     * 从原始数据文件中读取训练数据
+     *
+     * @param dataDateString
+     * @param stockCodeBean
+     * @param normolizer
+     * @return
+     */
+	public TrainingSet getTrainingSet(String dataDateString, StockCodeBean stockCodeBean, double normolizer) {
         TrainingSet trainingSet = new TrainingSet();
+
+        List<StockInfo> dataList = stockFileReaderService.readMoney163StockDataFile(dataDateString, stockCodeBean);
+        if (CollectionUtils.getSize(dataList) <= 0) {
+            return trainingSet;
+        }
+
         int length = dataList.size();
         if (length < 5) {
             logger.warn("dataList.size < 5");
@@ -74,9 +102,56 @@ public class TrainingDataService {
             return trainingSet;
         }
     }
-    
-    public TrainingSet getTestTrainingSet(List<StockInfo> dataList, double normolizer) {
+
+    /**
+     * TODO 如果有数据文件就直接读取, 否则从原始数据文件中读取
+     * @param dataDateString
+     * @param stockCodeBean
+     * @return TrainingSet
+     */
+    public TrainingSet loadTrainingSet(String dataDateString, StockCodeBean stockCodeBean) {
+        TrainingSet trainingSet = getTrainingSet(dataDateString, stockCodeBean, 100.00D);
+        if (trainingSet != null) {
+            File trainingSetDataFile = fileService.getTrainingSetDataFile(dataDateString, stockCodeBean.getCode());
+            if (trainingSetDataFile.exists()) {
+                return trainingSet;
+            }
+
+            // 将训练数据写入数据文件中
+            StringBuilder trainingData = new StringBuilder();
+            for (Iterator<TrainingElement> it = trainingSet.iterator(); it.hasNext();) {
+                SupervisedTrainingElement trainingElement = (SupervisedTrainingElement) it.next();
+                Vector<Double> vector = trainingElement.getInput();
+
+                StringBuilder data = new StringBuilder();
+                for (Iterator<Double> vit = vector.iterator(); vit.hasNext();) {
+                    data.append(vit.next()).append(Constants.SPLITER.COMMA);
+                }
+                data.append(trainingElement.getDesiredOutput().get(0));
+                data.append(StringUtils.LF);
+                trainingData.append(data);
+            }
+            FileUtils.writeStringToFile(trainingSetDataFile, trainingData.toString(), Boolean.TRUE, Constants.CHARSET.UTF8);
+        }
+        return trainingSet;
+    }
+
+    /**
+     * 加载测试数据
+     *
+     * @param dataDateString
+     * @param stockCodeBean
+     * @param normolizer
+     * @return
+     */
+    public TrainingSet loadTestTrainingSet(String dataDateString, StockCodeBean stockCodeBean, double normolizer) {
         TrainingSet testTrainingSet = new TrainingSet();
+
+        List<StockInfo> dataList = stockFileReaderService.readMoney163StockDataFile(dataDateString, stockCodeBean);
+        if (CollectionUtils.getSize(dataList) <= 0) {
+            return testTrainingSet;
+        }
+
         int length = dataList.size();
         if (length < 5) {
             logger.warn("dataList.size < 5");

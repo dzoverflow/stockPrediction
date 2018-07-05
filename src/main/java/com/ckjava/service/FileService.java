@@ -38,7 +38,7 @@ public class FileService extends FileUtils {
         return new File(joinPath(new String[]{ dataPath, "buyReport_" + dateString + ".txt" }));
     }
 
-    public File getNUpFile(String dateString) {
+    public File getLastNUpFile(String dateString) {
         return new File(joinPath(new String[]{ dataPath, "buyReport_nup_" + dateString + ".txt" }));
     }
 
