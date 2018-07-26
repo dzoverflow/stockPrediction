@@ -110,6 +110,12 @@
 			<version>4.3.6.RELEASE</version>
 		</dependency>
 		<!-- freemarker engine 相关 -->
+
+		<dependency>
+			<groupId>com.sun.mail</groupId>
+			<artifactId>javax.mail</artifactId>
+			<version>1.5.5</version>
+		</dependency>
 		
 	</dependencies>
 	

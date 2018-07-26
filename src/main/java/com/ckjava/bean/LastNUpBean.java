@@ -47,7 +47,7 @@ public class LastNUpBean {
     }
 
     public int compareTo(LastNUpBean lastNUpBean) {
-        return this.last2.compareTo(lastNUpBean.getLast2());
+        return lastNUpBean.getLast2().compareTo(this.last2);
     }
 
     public LastNUpBean() {

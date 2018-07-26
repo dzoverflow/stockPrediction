@@ -3,6 +3,7 @@ package com.ckjava;
 import com.ckjava.bean.BuyReportBean;
 import com.ckjava.bean.LastNUpBean;
 import com.ckjava.bean.StockCodeBean;
+import com.ckjava.email.EmailService;
 import com.ckjava.service.*;
 import com.ckjava.thread.runner.AnalysisRunner;
 import com.ckjava.thread.runner.PredictionRunner;
@@ -29,6 +30,7 @@ public class Run extends FileUtils {
         FileService fileService = appc.getBean(FileService.class);
         ThreadService threadService = appc.getBean(ThreadService.class);
         AnalysisStockService analysisStockService = appc.getBean(AnalysisStockService.class);
+        EmailService emailService = appc.getBean(EmailService.class);
 
         String downloadDateString = downloadFileService.getDownloadDateString();
         if (StringUtils.isBlank(downloadDateString)) {
@@ -158,6 +160,8 @@ public class Run extends FileUtils {
 
                 FileUtils.writeStringToFile(fileService.getLastNUpFile(dataDateString), analysisReport.toString(), Boolean.FALSE, Constants.CHARSET.UTF8);
                 logger.info(analysisReport.toString());
+
+                emailService.sendEmail("统计分析预测:".concat(dataDateString), analysisReport.toString());
 
             } catch (Exception e) {
                 logger.error("Run.main invokeAll has error", e);

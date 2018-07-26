@@ -1,10 +1,7 @@
 package com.ckjava.service;
 
 import com.ckjava.bean.StockCodeBean;
-import com.ckjava.xutils.Constants;
-import com.ckjava.xutils.FileUtils;
-import com.ckjava.xutils.HttpClientUtils;
-import com.ckjava.xutils.StringUtils;
+import com.ckjava.xutils.*;
 import com.ckjava.xutils.http.HttpResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,10 +11,7 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -62,10 +56,11 @@ public class DownloadFileService extends FileUtils implements Constants {
                 logger.error(this.getClass().getName().concat(".getStockCodeList has error"), e);
                 return dataList;
             }
-            List<String> codeList = extractVariable(targetString);
+            List<StockCodeBean> codeList = extractVariable(targetString);
             logger.info("getStockCodeList size = {}", codeList.size());
             for (int i = 0, c = (downloadLimit > 0 ? downloadLimit : codeList.size()); i < c; i++) {
-                dataList.add(new StockCodeBean(codeList.get(i), area, null));
+                StockCodeBean stockCodeBean = codeList.get(i);
+                dataList.add(new StockCodeBean(stockCodeBean.getCode(), area, stockCodeBean.getName()));
             }
         }
         return dataList;
@@ -112,18 +107,42 @@ public class DownloadFileService extends FileUtils implements Constants {
         return headers;
     }
 
-    private List<String> extractVariable(String targetString) {
-        List<String> variableList = new ArrayList<>();
+    private List<StockCodeBean> extractVariable(String targetString) {
+        List<String> codeList = new ArrayList<>();
+        // 提取 code
         if (StringUtils.isNotBlank(targetString) && targetString.contains("(") && targetString.contains(")")) {
             Pattern pattern = Pattern.compile("(\\([^\\).]*\\))");
             Matcher matcher = pattern.matcher(targetString);
             while (matcher.find()) {
                 String matcherStr = matcher.group();
                 String variable = matcherStr.replaceAll("\\(", "").replaceAll("\\)", "");
-                variableList.add(variable);
+                codeList.add(variable);
             }
         }
-        return variableList;
+        List<String> codeNameList = new ArrayList<>();
+        // 提取 code 名称
+        if (StringUtils.isNotBlank(targetString) && targetString.contains(">") && targetString.contains("(")) {
+            Pattern pattern = Pattern.compile("(>[^>.]*</a>)");
+            Matcher matcher = pattern.matcher(targetString);
+            while (matcher.find()) {
+                String matcherStr = matcher.group();
+                String variable = matcherStr.replaceAll("</a>", "").replaceAll(">", "");
+                codeNameList.add(variable);
+            }
+        }
+        List<StockCodeBean> codeBeans = new ArrayList<>();
+        // 生成 codeList
+        for (int i = 0, c = CollectionUtils.getSize(codeNameList); i < c; i++) {
+            String codeNameString = codeNameList.get(i);
+            for (int j = 0, d = CollectionUtils.getSize(codeList); j < d; j++) {
+                String codeString = codeList.get(j);
+                if (codeNameString.contains(codeString)) {
+                    codeBeans.add(new StockCodeBean(codeString, null, codeNameString));
+                    break;
+                }
+            }
+        }
+        return codeBeans;
     }
 
 }
