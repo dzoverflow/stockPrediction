@@ -4,16 +4,27 @@ import com.ckjava.bean.BuyReportBean;
 import com.ckjava.bean.LastNUpBean;
 import com.ckjava.bean.StockCodeBean;
 import com.ckjava.email.EmailService;
+import com.ckjava.email.MailInfoVo;
 import com.ckjava.service.*;
 import com.ckjava.thread.runner.AnalysisRunner;
+import com.ckjava.thread.runner.CloseAppRunner;
 import com.ckjava.thread.runner.PredictionRunner;
-import com.ckjava.xutils.*;
+import com.ckjava.thread.runner.SendEmailRunner;
+import com.ckjava.xutils.CollectionUtils;
+import com.ckjava.xutils.DateUtils;
+import com.ckjava.xutils.FileUtils;
+import com.ckjava.xutils.StringUtils;
+import freemarker.template.Template;
+import freemarker.template.TemplateException;
 import org.apache.commons.lang3.RandomUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.ui.freemarker.FreeMarkerTemplateUtils;
+import org.springframework.web.servlet.view.freemarker.FreeMarkerConfigurer;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.Future;
@@ -31,6 +42,7 @@ public class Run extends FileUtils {
         ThreadService threadService = appc.getBean(ThreadService.class);
         AnalysisStockService analysisStockService = appc.getBean(AnalysisStockService.class);
         EmailService emailService = appc.getBean(EmailService.class);
+        FreeMarkerConfigurer freeMarkerConfigurer = appc.getBean(FreeMarkerConfigurer.class);
 
         String downloadDateString = downloadFileService.getDownloadDateString();
         if (StringUtils.isBlank(downloadDateString)) {
@@ -59,6 +71,17 @@ public class Run extends FileUtils {
             }
         } else {
             logger.info("取消下载股票数据文件");
+        }
+
+        // 删除前一天的数据文件
+        try {
+            Date lastDate = DateUtils.getAssignDay(new Date(), -1);
+            String lastDateFilePath = fileService.getFilePath(DateUtils.formatTime(lastDate.getTime(), "yyyyMMdd")).getAbsolutePath();
+            boolean flag = deleteDirectory(lastDateFilePath);
+            System.out.println(flag);
+            logger.info("deleteDirectory {} success", lastDateFilePath);
+        } catch (Exception e) {
+            logger.error(Run.class.getName().concat(".deleteDirectory has error"), e);
         }
 
         String dataDateString = stockPredictionService.getDataDateString();
@@ -110,7 +133,7 @@ public class Run extends FileUtils {
                     buyReport.append(buyReportBean.toString()).append(StringUtils.LF);
                 }
 
-                FileUtils.writeStringToFile(fileService.getBuyReportFile(dataDateString), buyReport.toString(), Boolean.FALSE, Constants.CHARSET.UTF8);
+                FileUtils.writeStringToFile(fileService.getBuyReportFile(dataDateString), buyReport.toString(), Boolean.FALSE, CHARSET.UTF8);
                 logger.info(buyReport.toString());
 
             } catch (Exception e) {
@@ -158,11 +181,14 @@ public class Run extends FileUtils {
                     analysisReport.append(lastNUpBean.toString()).append(StringUtils.LF);
                 }
 
-                FileUtils.writeStringToFile(fileService.getLastNUpFile(dataDateString), analysisReport.toString(), Boolean.FALSE, Constants.CHARSET.UTF8);
+                FileUtils.writeStringToFile(fileService.getLastNUpFile(dataDateString), analysisReport.toString(), Boolean.FALSE, CHARSET.UTF8);
                 logger.info(analysisReport.toString());
 
-                emailService.sendEmail("统计分析预测:".concat(dataDateString), analysisReport.toString());
-
+                // 发送邮件
+                MailInfoVo mailInfoVo = new MailInfoVo();
+                mailInfoVo.setMailTitle("统计分析预测:".concat(dataDateString));
+                mailInfoVo.setMailContent(CollectionUtils.getSize(lastNUpBeanList) >0 ? analysisReport.toString() : "no data");
+                threadService.getSendEmailService().submit(new SendEmailRunner(emailService, mailInfoVo));
             } catch (Exception e) {
                 logger.error("Run.main invokeAll has error", e);
             }
@@ -171,6 +197,15 @@ public class Run extends FileUtils {
         }
 
         // 最后退出
-        System.exit(0);
+        threadService.getCloseAppService().submit(new CloseAppRunner(threadService));
+    }
+
+    public static String getMailContent(FreeMarkerConfigurer freeMarkerConfigurer, String title, String content, String templateName) throws IOException, TemplateException {
+        Map<String, Object> dataMap = new HashMap<>();
+        dataMap.put("title", title);
+        dataMap.put("content", content);
+
+        Template tpl = freeMarkerConfigurer.getConfiguration().getTemplate(templateName);
+        return FreeMarkerTemplateUtils.processTemplateIntoString(tpl, dataMap);
     }
 }

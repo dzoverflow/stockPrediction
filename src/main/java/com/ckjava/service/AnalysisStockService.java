@@ -93,7 +93,7 @@ public class AnalysisStockService extends FileUtils implements Constants {
 
         if (upFactor.compareTo(BigDecimal.ZERO) > 0) {
             lastNUpBean.setLast2(upFactor);
-            data.append("最近连续2天上涨:" + nt.format(upFactor));
+            data.append("连续2天上涨:" + nt.format(upFactor));
         }
 
         // 连续3天的涨幅, 分别超过 1% 到 10%
@@ -108,7 +108,7 @@ public class AnalysisStockService extends FileUtils implements Constants {
 
         if (upFactor.compareTo(BigDecimal.ZERO) > 0) {
             lastNUpBean.setLast3(upFactor);
-            data.append("最近连续3天上涨:" + nt.format(upFactor));
+            data.append(", 连续3天上涨:" + nt.format(upFactor));
         }
 
         return data.toString();

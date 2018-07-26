@@ -56,10 +56,9 @@ public class LastNUpBean {
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder();
-        sb.append("code='").append(stockCodeBean.getCode()).append('\'');
-        sb.append(", area='").append(stockCodeBean.getArea()).append('\'');
-        sb.append(", name='").append(stockCodeBean.getName()).append('\'');
-        sb.append(", desc='").append(desc).append('\'');
+        sb.append(stockCodeBean.getArea());
+        sb.append(",").append(stockCodeBean.getName());
+        sb.append(",").append(desc);
         return sb.toString();
     }
 }

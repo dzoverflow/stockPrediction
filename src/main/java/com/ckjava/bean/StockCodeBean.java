@@ -54,10 +54,9 @@ public class StockCodeBean implements Constants {
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder();
-        sb.append("code='").append(code).append('\'');
-        sb.append(", area='").append(area).append('\'');
-        sb.append(", name='").append(name).append('\'');
-        sb.append(", desc='").append(desc).append('\'');
+        sb.append(area);
+        sb.append(", ").append(name);
+        sb.append(", ").append(desc);
         return sb.toString();
     }
 

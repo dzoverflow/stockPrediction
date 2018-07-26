@@ -14,6 +14,10 @@ public class FileService extends FileUtils {
     @Value("${dataPath}")
     private String dataPath;
 
+    public File getFilePath(String dateString) {
+        return new File(joinPath(new String[] {dataPath, dateString}));
+    }
+
     public File getStockCodeFile(String area) {
         return new File(joinPath(new String[] {dataPath, "stockCode-"+area+".txt"}));
     }

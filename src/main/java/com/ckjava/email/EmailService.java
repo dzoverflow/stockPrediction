@@ -56,9 +56,10 @@ public class EmailService implements Constants {
      * @param subject
      * @param body
      */
-    public void sendEmail(String subject, String body) {
+    public Boolean sendEmail(String subject, String body) {
         try {
             Session session = getMailSession();
+            logger.info("Session is ready");
             MimeMessage msg = new MimeMessage(session);
             //set message headers
             msg.addHeader("Content-type", "text/HTML; charset=UTF-8");
@@ -75,9 +76,11 @@ public class EmailService implements Constants {
             msg.setRecipients(Message.RecipientType.TO, InternetAddress.parse(mailTo, false));
             logger.info("Message is ready");
             Transport.send(msg);
-            logger.info("EMail Sent Successfully!!");
+            logger.info("EMail Sent Successfully!");
+            return Boolean.TRUE;
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("EmailService.sendEmail has error", e);
+            return Boolean.FALSE;
         }
     }
 
