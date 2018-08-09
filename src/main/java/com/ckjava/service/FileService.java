@@ -22,20 +22,20 @@ public class FileService extends FileUtils {
         return new File(joinPath(new String[] {dataPath, "stockCode-"+area+".txt"}));
     }
 
-    public File getRawDataFile(String dateString, String code) {
-        return new File(joinPath(new String[]{ dataPath, dateString, code, "money163", "raw_data.csv" }));
+    public File getRawDataFile(String dateString, String area, String code) {
+        return new File(joinPath(new String[]{ dataPath, dateString, area, code, "money163", "raw_data.csv" }));
     }
 
-    public File getTrainingSetDataFile(String dateString, String code) {
-        return new File(joinPath(new String[]{ dataPath, dateString, code, "money163", "training_data.csv" }));
+    public File getTrainingSetDataFile(String dateString, String area, String code) {
+        return new File(joinPath(new String[]{ dataPath, dateString, area, code, "money163", "training_data.csv" }));
     }
 
-    public File getNeuralNetFile(String dateString, String code) {
-        return new File(joinPath(new String[]{ dataPath, dateString, code, "neural", "neural.dat" }));
+    public File getNeuralNetFile(String dateString, String area, String code) {
+        return new File(joinPath(new String[]{ dataPath, dateString, area, code, "neural", "neural.dat" }));
     }
 
-    public File getPredictionResultFile(String dateString, String code) {
-        return new File(joinPath(new String[]{ dataPath, dateString, code, "report", "report.txt" }));
+    public File getPredictionResultFile(String dateString, String area, String code) {
+        return new File(joinPath(new String[]{ dataPath, dateString, area, code, "report", "report.txt" }));
     }
 
     public File getBuyReportFile(String dateString) {

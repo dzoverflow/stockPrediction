@@ -112,7 +112,7 @@ public class TrainingDataService {
     public TrainingSet loadTrainingSet(String dataDateString, StockCodeBean stockCodeBean) {
         TrainingSet trainingSet = getTrainingSet(dataDateString, stockCodeBean, 100.00D);
         if (trainingSet != null) {
-            File trainingSetDataFile = fileService.getTrainingSetDataFile(dataDateString, stockCodeBean.getCode());
+            File trainingSetDataFile = fileService.getTrainingSetDataFile(dataDateString, stockCodeBean.getArea(), stockCodeBean.getCode());
             if (trainingSetDataFile.exists()) {
                 return trainingSet;
             }

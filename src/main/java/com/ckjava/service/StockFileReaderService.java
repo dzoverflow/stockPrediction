@@ -74,7 +74,7 @@ public class StockFileReaderService implements Constants {
     }
 
     public List<StockInfo> readMoney163StockDataFile(String dataDateString, StockCodeBean stockCodeBean) {
-        File file = fileService.getRawDataFile(dataDateString, stockCodeBean.getCode());
+        File file = fileService.getRawDataFile(dataDateString, stockCodeBean.getArea(), stockCodeBean.getCode());
     	List<StockInfo> dataList = new ArrayList<>();
         if (!file.exists()) {
             return dataList;

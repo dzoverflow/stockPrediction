@@ -68,7 +68,7 @@ public class StockPredictionService extends FileUtils implements Constants {
         TrainingSet trainingSet = trainingDataService.loadTrainingSet(dataDateString, stockCodeBean);
 
         // 使用数据集训练神经网络
-        File neuralFile = fileService.getNeuralNetFile(neuralDateString, stockCodeBean.getCode());
+        File neuralFile = fileService.getNeuralNetFile(neuralDateString, stockCodeBean.getArea(), stockCodeBean.getCode());
         NeuralNetwork neuralNet = null;
         if (neuralFile.exists() && neuralFile.length() > 0) {
             logger.info("neuralNetFile 存在，开始加载。。。");
@@ -163,7 +163,7 @@ public class StockPredictionService extends FileUtils implements Constants {
         report.append("Time stamp N3:" + new SimpleDateFormat("dd-MMM-yyyy HH:mm:ss:MM").format(new Date()));
         logger.info("report = {}", report.toString());
 
-        FileUtils.writeStringToFile(fileService.getPredictionResultFile(dataDateString, stockCodeBean.getCode()), report.toString(), Boolean.FALSE, Constants.CHARSET.UTF8);
+        FileUtils.writeStringToFile(fileService.getPredictionResultFile(dataDateString, stockCodeBean.getArea(), stockCodeBean.getCode()), report.toString(), Boolean.FALSE, Constants.CHARSET.UTF8);
 
         return buyReportBean;
     }

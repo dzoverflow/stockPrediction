@@ -56,7 +56,7 @@ public class LastNUpBean {
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder();
-        sb.append(stockCodeBean.getArea());
+        sb.append(stockCodeBean.getArea().equals("sh") ? "上海" : "深圳");
         sb.append(",").append(stockCodeBean.getName());
         sb.append(",").append(desc);
         return sb.toString();

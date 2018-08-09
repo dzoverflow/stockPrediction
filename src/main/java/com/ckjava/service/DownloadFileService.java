@@ -29,6 +29,8 @@ public class DownloadFileService extends FileUtils implements Constants {
     private String downloadDateString;
     @Value("${areaCode}")
     private String areaCode;
+    @Value("${downloadDateRange}")
+    private String downloadDateRange;
     @Autowired
     private FileService fileService;
 
@@ -73,24 +75,32 @@ public class DownloadFileService extends FileUtils implements Constants {
      * @return
      */
     public boolean downloadStockDataFile(String dateString, StockCodeBean stockCodeBean) {
-        File rawDataFile = fileService.getRawDataFile(dateString, stockCodeBean.getCode());
+        File rawDataFile = fileService.getRawDataFile(dateString, stockCodeBean.getArea(), stockCodeBean.getCode());
         if (rawDataFile.exists()) {
             return true;
         }
 
-        String downloadCode = stockCodeBean.getArea().equals("sh") ? "0".concat(stockCodeBean.getCode()) : "1".concat(stockCodeBean.getCode());
-
         Map<String, String> placeholderMap = new HashMap<>();
         placeholderMap.put("code", stockCodeBean.getCode());
-        placeholderMap.put("downloadCode", downloadCode);
-
         String descUrl = "http://quotes.money.163.com/trade/lsjysj_${code}.html";
-        String url = "http://quotes.money.163.com/service/chddata.html?code=${downloadCode}&fields=TCLOSE;HIGH;LOW;TOPEN;LCLOSE;CHG;PCHG;TURNOVER;VOTURNOVER;VATURNOVER;TCAP;MCAP";
-        url = StringUtils.replaceVariable(url, placeholderMap);
         descUrl = StringUtils.replaceVariable(descUrl, placeholderMap);
         logger.info("desc url = {}", descUrl);
 
-        HttpResult result = HttpClientUtils.get(url, getHeaders(), null);
+        String url = "http://quotes.money.163.com/service/chddata.html";
+
+        Map<String, String> params = new HashMap<>();
+        if (StringUtils.isNotBlank(downloadDateRange)) {
+            int range = Integer.parseInt(downloadDateRange);
+            Date now = new Date();
+            Date start = DateUtils.getAssignDay(now, -range);
+
+            params.put("code", stockCodeBean.getArea().equals("sh") ? "0".concat(stockCodeBean.getCode()) : "1".concat(stockCodeBean.getCode()));
+            params.put("start", DateUtils.formatTime(start.getTime(),"yyyyMMdd"));
+            params.put("end", DateUtils.formatTime(now.getTime(), "yyyyMMdd"));
+            params.put("fields", "TCLOSE;HIGH;LOW;TOPEN;LCLOSE;CHG;PCHG;TURNOVER;VOTURNOVER;VATURNOVER;TCAP;MCAP");
+        }
+
+        HttpResult result = HttpClientUtils.get(url, getHeaders(), params);
 
         writeStringToFile(rawDataFile, result.getBodyString(), Boolean.FALSE, CHARSET.UTF8);
 
