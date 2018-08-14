@@ -24,6 +24,7 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.ui.freemarker.FreeMarkerTemplateUtils;
 import org.springframework.web.servlet.view.freemarker.FreeMarkerConfigurer;
 
+import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.*;
@@ -51,24 +52,52 @@ public class Run extends FileUtils {
 
         // 读取股票编码
         List<StockCodeBean> dataList = downloadFileService.getStockCodeList();
+        // 遇到下载异常需要重试的列表
+        List<StockCodeBean> retryDataList = new ArrayList<>();
 
         // 下载股票数据文件
         if (downloadFileService.getIsDownloadRawFile()) {
             for (int i = 0, c = CollectionUtils.getSize(dataList); i < c; i++) {
                 StockCodeBean stockCodeBean = dataList.get(i);
-                if (blacklistService.isInBlacklist(stockCodeBean)) { // 如果在黑名单中就不再下载了
+                // 如果在黑名单中就不再下载了
+                if (blacklistService.isInBlacklist(stockCodeBean)) {
                     continue;
                 }
-
-                downloadFileService.downloadStockDataFile(downloadDateString, stockCodeBean);
-                try {
-                    long sleepTime = RandomUtils.nextLong(100, 2000);
-                    Thread.currentThread().sleep(sleepTime);
-                } catch (Exception e) {
-                    logger.error(Run.class.getName().concat(".main has error"), e);
+                // 如果已经下载过了就不再下载
+                File rawDataFile = fileService.getRawDataFile(downloadDateString, stockCodeBean.getArea(), stockCodeBean.getCode());
+                if (rawDataFile.exists()) {
+                    continue;
                 }
-
+                // 执行下载
+                boolean flag = downloadFileService.downloadStockDataFile(downloadDateString, stockCodeBean);
+                if (flag) {
+                    // 下载完毕后随机等待一下
+                    randomSleep();
+                } else {
+                    retryDataList.add(stockCodeBean);
+                }
             }
+
+            // 对于下载中遇到异常的股票重试3次下载
+            List<StockCodeBean> retrySuccessDataList = new ArrayList<>();
+            for (int i = 0; i < 3; i++) {
+                for (int j = 0, c = CollectionUtils.getSize(retryDataList); j < c; j++) {
+                    StockCodeBean stockCodeBean = retryDataList.get(j);
+                    if (retrySuccessDataList.contains(stockCodeBean)) {
+                        continue;
+                    }
+                    boolean flag = downloadFileService.downloadStockDataFile(downloadDateString, stockCodeBean);
+                    if (flag) {
+                        retrySuccessDataList.add(stockCodeBean);
+                        randomSleep();
+                    }
+                }
+            }
+            for (int j = 0, c = CollectionUtils.getSize(retryDataList); j < c; j++) {
+                StockCodeBean stockCodeBean = retryDataList.get(j);
+                logger.info("下载数据失败的股票为 {}", stockCodeBean.toString());
+            }
+
         } else {
             logger.info("取消下载股票数据文件");
         }
@@ -198,6 +227,15 @@ public class Run extends FileUtils {
 
         // 最后退出
         threadService.getCloseAppService().submit(new CloseAppRunner(threadService));
+    }
+
+    private static void randomSleep() {
+        try {
+            long sleepTime = RandomUtils.nextLong(100, 2000);
+            Thread.currentThread().sleep(sleepTime);
+        } catch (Exception e) {
+            logger.error(Run.class.getName().concat(".main has error"), e);
+        }
     }
 
     public static String getMailContent(FreeMarkerConfigurer freeMarkerConfigurer, String title, String content, String templateName) throws IOException, TemplateException {

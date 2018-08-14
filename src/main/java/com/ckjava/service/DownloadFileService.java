@@ -75,11 +75,6 @@ public class DownloadFileService extends FileUtils implements Constants {
      * @return
      */
     public boolean downloadStockDataFile(String dateString, StockCodeBean stockCodeBean) {
-        File rawDataFile = fileService.getRawDataFile(dateString, stockCodeBean.getArea(), stockCodeBean.getCode());
-        if (rawDataFile.exists()) {
-            return true;
-        }
-
         Map<String, String> placeholderMap = new HashMap<>();
         placeholderMap.put("code", stockCodeBean.getCode());
         String descUrl = "http://quotes.money.163.com/trade/lsjysj_${code}.html";
@@ -100,11 +95,16 @@ public class DownloadFileService extends FileUtils implements Constants {
             params.put("fields", "TCLOSE;HIGH;LOW;TOPEN;LCLOSE;CHG;PCHG;TURNOVER;VOTURNOVER;VATURNOVER;TCAP;MCAP");
         }
 
-        HttpResult result = HttpClientUtils.get(url, getHeaders(), params);
+        try {
+            HttpResult result = HttpClientUtils.get(url, getHeaders(), params);
 
-        writeStringToFile(rawDataFile, result.getBodyString(), Boolean.FALSE, CHARSET.UTF8);
-
-        return true;
+            File rawDataFile = fileService.getRawDataFile(dateString, stockCodeBean.getArea(), stockCodeBean.getCode());
+            writeStringToFile(rawDataFile, result.getBodyString(), Boolean.FALSE, CHARSET.UTF8);
+            return true;
+        } catch (Exception e) {
+            logger.error("downloadStockDataFile has error, stockCodeBean = " + stockCodeBean.toString(), e);
+            return false;
+        }
     }
 
     private Map<String, String> getHeaders() {

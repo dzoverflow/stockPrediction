@@ -3,6 +3,8 @@ package com.ckjava.bean;
 import com.ckjava.xutils.Constants;
 import com.ckjava.xutils.StringUtils;
 
+import java.util.Objects;
+
 public class StockCodeBean implements Constants {
 
     private String code;
@@ -58,6 +60,21 @@ public class StockCodeBean implements Constants {
         sb.append(", ").append(name);
         sb.append(", ").append(desc);
         return sb.toString();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        StockCodeBean that = (StockCodeBean) o;
+        return Objects.equals(code, that.code) &&
+                Objects.equals(area, that.area);
+    }
+
+    @Override
+    public int hashCode() {
+
+        return Objects.hash(code, area);
     }
 
     public String getBlacklistString() {
