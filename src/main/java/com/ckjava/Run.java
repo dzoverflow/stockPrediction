@@ -27,6 +27,7 @@ import org.springframework.web.servlet.view.freemarker.FreeMarkerConfigurer;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.text.MessageFormat;
 import java.util.*;
 import java.util.concurrent.Future;
 
@@ -188,11 +189,23 @@ public class Run extends FileUtils {
                 List<Future<LastNUpBean>> futureList = threadService.getPredictionService().invokeAll(runnerList);
                 logger.info("end analysis");
 
+                int upCount = 0;
+                int eqCount = 0;
+                int downCount = 0;
                 List<LastNUpBean> lastNUpBeanList = new ArrayList<>();
                 for (int i = 0; i < futureList.size(); i++) {
                     LastNUpBean lastNUpBean = futureList.get(i).get();
                     if (StringUtils.isNotBlank(lastNUpBean.getDesc())) {
                         lastNUpBeanList.add(lastNUpBean);
+                    }
+                    if (lastNUpBean.getLast1().compareTo(BigDecimal.ZERO) == 1) {
+                        upCount ++;
+                    }
+                    if (lastNUpBean.getLast1().compareTo(BigDecimal.ZERO) == 0) {
+                        eqCount ++;
+                    }
+                    if (lastNUpBean.getLast1().compareTo(BigDecimal.ZERO) == -1) {
+                        downCount ++;
                     }
                 }
 
@@ -214,9 +227,17 @@ public class Run extends FileUtils {
                 logger.info(analysisReport.toString());
 
                 // 发送邮件
+                String dateTitle = DateUtils.formatTime(new Date().getTime(), "yyyy年MM月dd日");
+                String mailTitle = dateTitle.concat(" 沪深个股上涨情况统计分析");
+                StringBuilder mailContent = new StringBuilder();
+                mailContent.append(MessageFormat.format("统计个股数{0}, 上涨个股数{1}, 下跌个股数{2}, 涨幅不变个股数{3}", new Object[]{ futureList.size(), upCount, downCount, eqCount })).append(StringUtils.LF);
+                mailContent.append("区域,股票, 连续2天上涨,连续3天上涨").append(StringUtils.LF);
+                mailContent.append(CollectionUtils.getSize(lastNUpBeanList) >0 ? analysisReport.toString() : "no data").append(StringUtils.LF);
+                mailContent.append("注意：根据历史数据统计股票上涨情况，连续3天是指该股票今天，昨天，前天的涨幅超过了%多少。");
+
                 MailInfoVo mailInfoVo = new MailInfoVo();
-                mailInfoVo.setMailTitle("统计分析预测:".concat(dataDateString));
-                mailInfoVo.setMailContent(CollectionUtils.getSize(lastNUpBeanList) >0 ? analysisReport.toString() : "no data");
+                mailInfoVo.setMailTitle(mailTitle);
+                mailInfoVo.setMailContent(mailContent.toString());
                 threadService.getSendEmailService().submit(new SendEmailRunner(emailService, mailInfoVo));
             } catch (Exception e) {
                 logger.error("Run.main invokeAll has error", e);

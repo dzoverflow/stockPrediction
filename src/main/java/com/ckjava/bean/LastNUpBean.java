@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 public class LastNUpBean {
 
     private StockCodeBean stockCodeBean;
+    private BigDecimal last1;
     private BigDecimal last2;
     private BigDecimal last3;
     private String desc;
@@ -39,6 +40,14 @@ public class LastNUpBean {
 
     public void setLast3(BigDecimal last3) {
         this.last3 = last3;
+    }
+
+    public BigDecimal getLast1() {
+        return last1;
+    }
+
+    public void setLast1(BigDecimal last1) {
+        this.last1 = last1;
     }
 
     public LastNUpBean(StockCodeBean stockCodeBean, String desc) {

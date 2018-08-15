@@ -51,8 +51,6 @@ public class AnalysisStockService extends FileUtils implements Constants {
     public LastNUpBean doAnalysis(String dataDateString, StockCodeBean stockCodeBean) {
         LastNUpBean lastNUpBean = new LastNUpBean(stockCodeBean, null);
 
-        StringBuilder report = new StringBuilder();
-
         // 使用测试集
         // 加载最近的 4 天数据
         TrainingSet testSet = trainingDataService.loadTestTrainingSet(dataDateString, stockCodeBean, 100.00D);
@@ -81,6 +79,8 @@ public class AnalysisStockService extends FileUtils implements Constants {
         BigDecimal up2 = BigDecimal.valueOf(d2).subtract(BigDecimal.valueOf(d1)).divide(BigDecimal.valueOf(d1), 4, BigDecimal.ROUND_HALF_UP);
         BigDecimal up3 = BigDecimal.valueOf(d3).subtract(BigDecimal.valueOf(d2)).divide(BigDecimal.valueOf(d2), 4, BigDecimal.ROUND_HALF_UP);
         StringBuilder data = new StringBuilder();
+
+        lastNUpBean.setLast1(up1);
 
         // 连续2天的涨幅, 分别超过 1% 到 10%
         BigDecimal upFactor = BigDecimal.ZERO;
