@@ -1,7 +1,7 @@
 package com.ckjava;
 
 import com.ckjava.bean.BuyReportBean;
-import com.ckjava.bean.LastNUpBean;
+import com.ckjava.bean.LastNBean;
 import com.ckjava.bean.StockCodeBean;
 import com.ckjava.email.EmailService;
 import com.ckjava.email.MailInfoVo;
@@ -186,41 +186,38 @@ public class Run extends FileUtils {
 
             try {
                 logger.info("start analysis");
-                List<Future<LastNUpBean>> futureList = threadService.getPredictionService().invokeAll(runnerList);
+                List<Future<LastNBean>> futureList = threadService.getPredictionService().invokeAll(runnerList);
                 logger.info("end analysis");
 
+                // 上涨的情况
                 int upCount = 0;
-                int eqCount = 0;
-                int downCount = 0;
-                List<LastNUpBean> lastNUpBeanList = new ArrayList<>();
+                List<LastNBean> lastNUpBeanList = new ArrayList<>();
                 for (int i = 0; i < futureList.size(); i++) {
-                    LastNUpBean lastNUpBean = futureList.get(i).get();
-                    if (StringUtils.isNotBlank(lastNUpBean.getDesc())) {
-                        lastNUpBeanList.add(lastNUpBean);
+                    LastNBean lastNBean = futureList.get(i).get();
+                    if (StringUtils.isNotBlank(lastNBean.getUpDesc())) {
+                        lastNUpBeanList.add(lastNBean);
                     }
-                    if (lastNUpBean.getLast1().compareTo(BigDecimal.ZERO) == 1) {
-                        upCount ++;
-                    }
-                    if (lastNUpBean.getLast1().compareTo(BigDecimal.ZERO) == 0) {
-                        eqCount ++;
-                    }
-                    if (lastNUpBean.getLast1().compareTo(BigDecimal.ZERO) == -1) {
-                        downCount ++;
+                    if (lastNBean.getUp1() != null) {
+                        if (lastNBean.getUp1().compareTo(BigDecimal.ZERO) == 1) {
+                            upCount ++;
+                        }
+                    } else {
+                        logger.warn("异常股票信息 {}", lastNBean.toString());
                     }
                 }
 
                 // 根据最后收益变化排序
-                Collections.sort(lastNUpBeanList, new Comparator<LastNUpBean>() {
+                Collections.sort(lastNUpBeanList, new Comparator<LastNBean>() {
                     @Override
-                    public int compare(LastNUpBean o1, LastNUpBean o2) {
-                        return o1.compareTo(o2);
+                    public int compare(LastNBean o1, LastNBean o2) {
+                        return o1.compareUpTo(o2);
                     }
                 });
 
                 // 最后输出到报表
                 StringBuilder analysisReport = new StringBuilder();
-                for (LastNUpBean lastNUpBean: lastNUpBeanList) {
-                    analysisReport.append(lastNUpBean.toString()).append(StringUtils.LF);
+                for (LastNBean lastNBean : lastNUpBeanList) {
+                    analysisReport.append(lastNBean.toUpString()).append(StringUtils.LF);
                 }
 
                 FileUtils.writeStringToFile(fileService.getLastNUpFile(dataDateString), analysisReport.toString(), Boolean.FALSE, CHARSET.UTF8);
@@ -230,12 +227,60 @@ public class Run extends FileUtils {
                 String dateTitle = DateUtils.formatTime(new Date().getTime(), "yyyy年MM月dd日");
                 String mailTitle = dateTitle.concat(" 沪深个股上涨情况统计分析");
                 StringBuilder mailContent = new StringBuilder();
-                mailContent.append(MessageFormat.format("统计个股数{0}, 上涨个股数{1}, 下跌个股数{2}, 涨幅不变个股数{3}", new Object[]{ futureList.size(), upCount, downCount, eqCount })).append(StringUtils.LF);
+                mailContent.append(MessageFormat.format("统计个股数{0}, 上涨个股数{1}", new Object[]{ futureList.size(), upCount })).append(StringUtils.LF);
                 mailContent.append("区域,股票, 连续2天上涨,连续3天上涨").append(StringUtils.LF);
                 mailContent.append(CollectionUtils.getSize(lastNUpBeanList) >0 ? analysisReport.toString() : "no data").append(StringUtils.LF);
                 mailContent.append("注意：根据历史数据统计股票上涨情况，连续3天是指该股票今天，昨天，前天的涨幅超过了%多少。");
 
                 MailInfoVo mailInfoVo = new MailInfoVo();
+                mailInfoVo.setMailTitle(mailTitle);
+                mailInfoVo.setMailContent(mailContent.toString());
+                threadService.getSendEmailService().submit(new SendEmailRunner(emailService, mailInfoVo));
+
+                // 下跌情况
+                int downCount = 0;
+                List<LastNBean> lastNDownBeanList = new ArrayList<>();
+                for (int i = 0; i < futureList.size(); i++) {
+                    LastNBean lastNBean = futureList.get(i).get();
+                    if (StringUtils.isNotBlank(lastNBean.getDownDesc())) {
+                        lastNDownBeanList.add(lastNBean);
+                    }
+                    if (lastNBean.getUp1() != null) {
+                        if (lastNBean.getUp1().compareTo(BigDecimal.ZERO) == -1) {
+                            downCount ++;
+                        }
+                    } else {
+                        logger.warn("异常股票信息 {}", lastNBean.toString());
+                    }
+                }
+
+                // 根据最后收益变化排序
+                Collections.sort(lastNDownBeanList, new Comparator<LastNBean>() {
+                    @Override
+                    public int compare(LastNBean o1, LastNBean o2) {
+                        return o1.compareDownTo(o2);
+                    }
+                });
+
+                // 最后输出到报表
+                analysisReport = new StringBuilder();
+                for (LastNBean lastNBean : lastNDownBeanList) {
+                    analysisReport.append(lastNBean.toDownString()).append(StringUtils.LF);
+                }
+
+                FileUtils.writeStringToFile(fileService.getLastNDownFile(dataDateString), analysisReport.toString(), Boolean.FALSE, CHARSET.UTF8);
+                logger.info(analysisReport.toString());
+
+                // 发送邮件
+                dateTitle = DateUtils.formatTime(new Date().getTime(), "yyyy年MM月dd日");
+                mailTitle = dateTitle.concat(" 沪深个股下跌情况统计分析");
+                mailContent = new StringBuilder();
+                mailContent.append(MessageFormat.format("统计个股数{0}, 下跌个股数{1}", new Object[]{ futureList.size(), downCount })).append(StringUtils.LF);
+                mailContent.append("区域,股票, 连续2天下跌,连续3天下跌").append(StringUtils.LF);
+                mailContent.append(CollectionUtils.getSize(lastNDownBeanList) >0 ? analysisReport.toString() : "no data").append(StringUtils.LF);
+                mailContent.append("注意：根据历史数据统计股票下跌情况，连续3天是指该股票今天，昨天，前天的跌幅超过了%多少。");
+
+                mailInfoVo = new MailInfoVo();
                 mailInfoVo.setMailTitle(mailTitle);
                 mailInfoVo.setMailContent(mailContent.toString());
                 threadService.getSendEmailService().submit(new SendEmailRunner(emailService, mailInfoVo));

@@ -1,13 +1,13 @@
 package com.ckjava.thread.runner;
 
-import com.ckjava.bean.LastNUpBean;
+import com.ckjava.bean.LastNBean;
 import com.ckjava.bean.StockCodeBean;
 import com.ckjava.service.AnalysisStockService;
 import com.ckjava.xutils.Constants;
 
 import java.util.concurrent.Callable;
 
-public class AnalysisRunner implements Callable<LastNUpBean>, Constants {
+public class AnalysisRunner implements Callable<LastNBean>, Constants {
 
     private AnalysisStockService analysisStockService;
     private StockCodeBean stockCodeBean;
@@ -20,7 +20,7 @@ public class AnalysisRunner implements Callable<LastNUpBean>, Constants {
     }
 
     @Override
-    public LastNUpBean call() throws Exception {
+    public LastNBean call() throws Exception {
         return analysisStockService.doAnalysis(dataDateString, stockCodeBean);
     }
 }

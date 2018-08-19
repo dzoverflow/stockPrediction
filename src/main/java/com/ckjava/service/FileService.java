@@ -46,6 +46,10 @@ public class FileService extends FileUtils {
         return new File(joinPath(new String[]{ dataPath, "buyReport_nup_" + dateString + ".txt" }));
     }
 
+    public File getLastNDownFile(String dateString) {
+        return new File(joinPath(new String[]{ dataPath, "buyReport_ndown_" + dateString + ".txt" }));
+    }
+
     public File getBlacklistFile() {
         return new File(joinPath(new String[]{ dataPath, "blacklist.txt" }));
     }
