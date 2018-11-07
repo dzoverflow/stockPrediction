@@ -137,7 +137,7 @@ public class AnalysisStockService extends FileUtils implements Constants {
 
         lastNBean.setDown1(down1);
 
-        // 连续2天的跌幅, 分别超过 1% 到 10%
+        // 连续2天的跌幅, 分别超过 -1% 到 -10%
         BigDecimal downFactor = BigDecimal.ZERO;
         for (int i = 1; i <= 10; i++) {
             BigDecimal down = BigDecimal.valueOf(i/100D);
@@ -153,7 +153,7 @@ public class AnalysisStockService extends FileUtils implements Constants {
             data.append("连续2天下跌:" + nt.format(downFactor));
         }
 
-        // 连续3天的涨幅, 分别超过 1% 到 10%
+        // 连续3天的跌幅, 分别超过 -1% 到 -10%
         downFactor = BigDecimal.ZERO;
         for (int i = 1; i <= 10; i++) {
             BigDecimal down = BigDecimal.valueOf(i/100D);

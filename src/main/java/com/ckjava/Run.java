@@ -237,6 +237,17 @@ public class Run extends FileUtils {
                 mailInfoVo.setMailContent(mailContent.toString());
                 threadService.getSendEmailService().submit(new SendEmailRunner(emailService, mailInfoVo));
 
+                if (CollectionUtils.getSize(lastNUpBeanList) > 0) {
+                    LastNBean lastNBean = lastNUpBeanList.get(0);
+                    File rawFile = fileService.getRawDataFile(dataDateString, lastNBean.getStockCodeBean().getArea(), lastNBean.getStockCodeBean().getCode());
+                    String rawData = readFileContent(rawFile, CHARSET.UTF8);
+
+                    mailInfoVo = new MailInfoVo();
+                    mailInfoVo.setMailTitle(lastNBean.getStockCodeBean().getName().concat(" 上涨原始数据"));
+                    mailInfoVo.setMailContent(rawData);
+                    threadService.getSendEmailService().submit(new SendEmailRunner(emailService, mailInfoVo));
+                }
+
                 // 下跌情况
                 int downCount = 0;
                 List<LastNBean> lastNDownBeanList = new ArrayList<>();
@@ -284,6 +295,17 @@ public class Run extends FileUtils {
                 mailInfoVo.setMailTitle(mailTitle);
                 mailInfoVo.setMailContent(mailContent.toString());
                 threadService.getSendEmailService().submit(new SendEmailRunner(emailService, mailInfoVo));
+
+                if (CollectionUtils.getSize(lastNDownBeanList) > 0) {
+                    LastNBean lastNBean = lastNDownBeanList.get(0);
+                    File rawFile = fileService.getRawDataFile(dataDateString, lastNBean.getStockCodeBean().getArea(), lastNBean.getStockCodeBean().getCode());
+                    String rawData = readFileContent(rawFile, CHARSET.UTF8);
+
+                    mailInfoVo = new MailInfoVo();
+                    mailInfoVo.setMailTitle(lastNBean.getStockCodeBean().getName().concat(" 下跌涨原始数据"));
+                    mailInfoVo.setMailContent(rawData);
+                    threadService.getSendEmailService().submit(new SendEmailRunner(emailService, mailInfoVo));
+                }
             } catch (Exception e) {
                 logger.error("Run.main invokeAll has error", e);
             }
